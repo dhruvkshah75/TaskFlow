@@ -12,8 +12,8 @@ class UserCreate(BaseModel):
 
 class UserResponse(BaseModel):
     id: int
-    email: EmailStr
-    username_id: str
+    email: str
+    username: str
     created_at: datetime
     class Config:
         from_attributes = True
