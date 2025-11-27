@@ -20,16 +20,18 @@ def login(user_credentials: schemas.UserLogin, db: Session=Depends(database.get_
     user_email_query = db.query(models.User).filter(
         or_(
             models.User.email == user_credentials.identifier,
-            models.User.username_id == user_credentials.identifier
+            models.User.username == user_credentials.identifier
         )
     )
 
     user = user_email_query.first()
 
+    # Account does not exist
     if not user:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, 
                             detail=f'Invalid Credentials')
     else:
+        # Password is incorrect 
         if not utils.verify(user_credentials.password, user.password):
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, 
                                 detail=f'Invalid Credentials')
