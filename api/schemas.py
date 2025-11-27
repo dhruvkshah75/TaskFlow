@@ -1,4 +1,4 @@
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, Field
 from datetime import datetime 
 from typing import Optional
 from core.models import TaskStatus
@@ -50,4 +50,29 @@ class TaskResponse(BaseModel):
     owner_id: int
     class Config:
         from_attributes = True
+
+
+# ======== API KEY SCHEMAS ===========
+
+# Used to display safe information about a key (NO secret value)
+class ApiKeyInfo(BaseModel):
+    id: int
+    created_at: datetime
+    expires_at: Optional[datetime] = None
+    is_active: bool
+    class Config:
+        from_attributes = True
+
+# Used ONLY for the response when a new key is created
+class ApiKeyResponse(BaseModel):
+    api_key: str
+    expires_at: Optional[datetime] = None
+
+class createAPIkey(BaseModel):
+    days: Optional[int] = Field(
+        30, 
+        gt=0, 
+        le=121,
+        description="Number of days the key will be valid for. Must be a positive integer. Defaults to 30."
+    )
 
