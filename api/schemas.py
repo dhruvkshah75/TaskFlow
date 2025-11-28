@@ -33,6 +33,7 @@ class Token_data(BaseModel):
     id: Optional[int] = None
 
 
+# ============= TASKS SCHEMAS =========================
 
 # Schemas for craeting a new Task
 class TaskBase(BaseModel):
@@ -40,6 +41,9 @@ class TaskBase(BaseModel):
 
 class TaskCreate(TaskBase):
     pass 
+
+class TaskUpdate(TaskBase):
+    pass
 
 # Schema for the response when the task is returned 
 class TaskResponse(BaseModel):
@@ -52,7 +56,7 @@ class TaskResponse(BaseModel):
         from_attributes = True
 
 
-# ======== API KEY SCHEMAS ===========
+# ============ API KEY SCHEMAS =================
 
 # Used to display safe information about a key (NO secret value)
 class ApiKeyInfo(BaseModel):

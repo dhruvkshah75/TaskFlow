@@ -79,6 +79,8 @@ class ApiKey(Base):
                         nullable=False)
     is_active = Column(Boolean, server_default='TRUE', nullable=False)
     expires_at = Column(TIMESTAMP(timezone=True), nullable=True) 
+    # if api key is not used for a long time then the key will be removed
+    last_used_at = Column(TIMESTAMP(timezone=True), nullable=True)
     # Nullable means it can last forever
 
     owner = relationship("User")

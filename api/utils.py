@@ -1,4 +1,5 @@
 from passlib.context import CryptContext
+import hashlib
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
@@ -22,3 +23,11 @@ def verify_hash(plain_value: str, hashed_value: str) -> bool:
     Returns True if they match, False otherwise.
     """
     return pwd_context.verify(plain_value, hashed_value)
+
+
+def hash_api_key(key: str) -> str:
+    """
+    Generates a deterministic SHA256 hash for API Keys.
+    Use this for BOTH creating the key (in users.py) and verifying it (in security.py).
+    """
+    return hashlib.sha256(key.encode()).hexdigest()

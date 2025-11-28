@@ -1,6 +1,5 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from core.database import engine
 from .routers import api_keys, auth, status, tasks, user
 
 app = FastAPI()
@@ -19,6 +18,8 @@ app.include_router(api_keys.router)
 app.include_router(user.router)
 app.include_router(auth.router)
 app.include_router(tasks.router)
+app.include_router(status.router)
+
 
 
 @app.get("/")

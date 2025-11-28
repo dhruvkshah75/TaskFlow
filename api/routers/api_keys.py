@@ -4,7 +4,7 @@ from datetime import datetime, timedelta, timezone
 from .. import schemas, oauth2
 from core import models, database
 import secrets
-from ..utils import hash_value
+from ..utils import hash_api_key
 from typing import List
 
 
@@ -28,7 +28,7 @@ def create_api_key(key_options: schemas.createAPIkey,
     expires = datetime.now(timezone.utc) + timedelta(days=key_options.days)
 
     key_record = models.ApiKey(
-        key_hash = hash_value(new_key),
+        key_hash = hash_api_key(new_key),
         owner_id = current_user.id,
         expires_at = expires
     )
@@ -37,7 +37,7 @@ def create_api_key(key_options: schemas.createAPIkey,
     db.commit()
 
     return {
-        "API_key": new_key,
+        "api_key": new_key,
         "expires_at": expires
     }
 
