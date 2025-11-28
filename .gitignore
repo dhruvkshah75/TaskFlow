@@ -2,3 +2,4 @@ venv/
 notes.md
 .env
 __pycache__
+.vscode/
