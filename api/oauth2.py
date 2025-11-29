@@ -201,6 +201,6 @@ def get_current_user(
         )
     
     # Set the user_id on request state so RateLimiter (or other dependencies) can use it
-    request.state.user_id = user.id
+    # request.state.user_id = user.id
     
     return user
