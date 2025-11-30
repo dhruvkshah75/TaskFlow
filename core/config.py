@@ -22,6 +22,8 @@ class Settings(BaseSettings):
     MAX_FAILED_ATTEMPTS: int
     LOCKOUT_DURATION_SECONDS: int
 
+    HEARTBEAT_INTERVAL_SECONDS: int
+
     model_config = SettingsConfigDict(
         env_file=".env",
         extra="ignore",       # Ignores extra variables in .env
