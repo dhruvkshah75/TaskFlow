@@ -1,4 +1,4 @@
-"""empty message
+"""Created the users table 
 
 Revision ID: 0ed172807493
 Revises: 

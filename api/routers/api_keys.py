@@ -56,7 +56,8 @@ def get_user_api_keys(db: Session=Depends(database.get_db),
         models.ApiKey.owner_id == current_user.id
     ).all()
 
-    return keys
+
+
 
 @router.delete("/{key_id}", status_code=status.HTTP_204_NO_CONTENT)
 def remove_api_key(key_id: int, db: Session = Depends(database.get_db),
