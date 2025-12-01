@@ -13,7 +13,7 @@ router = APIRouter(
 
 @router.post("/", status_code=status.HTTP_201_CREATED, response_model=schemas.TaskResponse)
 def create_task(task: schemas.TaskCreate, db: Session=Depends(get_db),
-                current_user: dict = Depends(get_current_user)):
+                current_user: models.User = Depends(get_current_user)):
     """
     Creates a new task for the currently logged in user
     """

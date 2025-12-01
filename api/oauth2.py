@@ -10,7 +10,8 @@ from core.config import settings
 # Use the dedicated redis client file
 from core.redis_client import get_redis
 from .utils import hash_api_key 
-import redis
+import redis, json
+from datetime import datetime
 
 
 # the auto error means that even if the token method fails the api key method might work so try that 
@@ -90,39 +91,58 @@ def check_ip_lockout(redis_client: redis.Redis, client_ip: str):
 
 def get_current_user_token(token: str, db: Session, redis_client: redis.Redis, client_ip: str):
     """
-    Verifies JWT. 
-    We attempt verification BEFORE checking lockout. 
-    If valid, we CLEAR the lockout (Forgiveness).
+    Verifies JWT, fetches user data from cache or DB, and returns a consistent user object.
     """
     credentials_exception = HTTPException(
-        status_code=status.HTTP_401_UNAUTHORIZED, 
+        status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Could not validate credentials",
         headers={"WWW-Authenticate": "Bearer"}
     )
 
     try:
-        # 1. Try to verify signature
+        # 1. Verify JWT signature and get user ID
         token_data = verify_access_token(token, credentials_exception)
-        
-        # 2. Verify user exists
-        user = db.query(models.User).filter(models.User.id == token_data.id).first()
-        if not user:
-            raise credentials_exception
 
-        # 3. SUCCESS! - The user proved their identity with a hard-to-fake token.
-        # We forgive their IP lockout immediately so they can fix their API key issues.
-        redis_client.delete(f"lockout:ip:{client_ip}")   # Clear Lockout
-        redis_client.delete(f"failed:ip:{client_ip}")    # Reset the counter
-        
+        user_id = token_data.id
+        user_profile_key = f"user:profile:{user_id}"
+        # 2. Check cache first
+        cached_user_profile = redis_client.get(user_profile_key)
+
+        if cached_user_profile:
+            # CACHE HIT: Parse the JSON and create a Pydantic model instance
+            user_dict = json.loads(cached_user_profile)
+            user = schemas.UserResponse(**user_dict)
+        else:
+            # CACHE MISS: Fetch from the database
+            user_from_db = db.query(models.User).filter(models.User.id == user_id).first()
+            if not user_from_db:
+                raise credentials_exception
+
+            # Create a dictionary of safe data to cache (no password)
+            user_data_to_cache = {
+                "id": user_from_db.id,
+                "email": user_from_db.email,
+                "username": user_from_db.username
+            }
+            
+            # Populate the cache for the next request
+            redis_client.setex(
+                user_profile_key,
+                3600,
+                json.dumps(user_data_to_cache)
+            )
+            user = user_from_db
+
+        # 3. SUCCESS! Forgive any IP-based lockouts
+        redis_client.delete(f"lockout:ip:{client_ip}")
+        redis_client.delete(f"failed:ip:{client_ip}")
+
         return user
 
     except Exception:
-        # 4. FAILURE
-        # If the token was invalid, NOW we punish.
+        # 4. FAILURE: Handle failed attempts and IP lockouts
         handle_auth_failure(redis_client, client_ip)
-        # If they are locked out, enforce it now.
         check_ip_lockout(redis_client, client_ip)
-        
         raise credentials_exception
 
 

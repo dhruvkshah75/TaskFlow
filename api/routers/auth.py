@@ -18,65 +18,39 @@ def login(
     redis_client: redis.Redis = Depends(get_redis)  
 ):
     """
-    This module handles the authentication endpoint (/login) for users. 
-    It uses a Redis-backed caching strategy (Read-Through Cache) to store user credentials 
-    (hashedpassword and ID)for faster subsequent lookups.  On cache miss, it fetches user data from the PostgreSQL database 
-    and populates the cache. It performs password verification and issues a JWT access token upon successful authentication, 
-    while invalidating the cache if password verification fails to ensure data consistency.
-
-    This summarizes the core logic:
-    1.  Endpoint: /login
-    2.  Strategy: Redis Caching (Read-Through)
-    3.  Fallback: Database lookup
-    4.  Action: Password verification & JWT issuance
-    5.  Safety: Cache invalidation on failure
+    Handles user authentication and caching.
     """
 
-    identifier = user_credentials.identifier
-    # cache key for the current user who is trying to login This is what we search in in the redis-cache 
-    cache_key = f"user:cache:{identifier}"
-
-    # now we try to fetch the user from cache with this cache_key
-    cached_user_data = redis_client.get(cache_key)
-    user_data = None
-
-    if cached_user_data: 
-        # we found the data in the cache
-        user_data = json.loads(cached_user_data)  # store as json
-    else: 
-        # Not in cache then check in database 
-        user_email_query = db.query(models.User).filter(
-            or_(
-                models.User.email == user_credentials.identifier,
-                models.User.username == user_credentials.identifier
-            )
+    # Query user by email or username
+    user_email_query = db.query(models.User).filter(
+        or_(
+            models.User.email == user_credentials.identifier,
+            models.User.username == user_credentials.identifier
         )
+    )
 
-        user = user_email_query.first()
-
-        if user:
-            # Account exists but not in cache, so we now store in cache for further use 
-            user_data = {
-                "id": user.id,
-                "password": user.password  # Hashed password
-            }
-            # Save to Redis cache for 1 hour 
-            redis_client.setex(cache_key, 3600, json.dumps(user_data))
-        else: 
-            pass # user not in database 
+    user = user_email_query.first()
 
     # Account does not exist
-    if user_data == None:
+    if user is None:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, 
                             detail=f'Invalid Credentials')
-    else:
-        # Password is incorrect then raise exception and delete the cache based on cache_key 
-        if not utils.verify(user_credentials.password, user_data["password"]):
-            redis_client.delete(cache_key)
-            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, 
-                                detail=f'Invalid Credentials')
-        
-    # create a token from the oauth2.py with the payload data as user_id
-    access_token = oauth2.create_access_token(data={"user_id": user_data["id"]})
-    
+
+    # Password verification
+    if not utils.verify(user_credentials.password, user.password):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, 
+                            detail=f'Invalid Credentials')
+
+    # Cache user data
+    user_profile_key = f"user:profile:{user.id}"
+    user_data_to_cache = {
+        "id": user.id,
+        "email": user.email,
+        "username": user.username
+    }
+    redis_client.setex(user_profile_key, 3600, json.dumps(user_data_to_cache))
+
+    # Create JWT access token
+    access_token = oauth2.create_access_token(data={"user_id": user.id})
+
     return {"access_token": access_token, "token_type": "bearer"}

@@ -1,5 +1,5 @@
 venv/
-notes.md
+markdown/
 .env
 __pycache__
 .vscode/

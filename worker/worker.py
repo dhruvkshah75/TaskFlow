@@ -26,7 +26,7 @@ async def worker_loop():
             ).first()
 
             if task and task.status == 'PENDING':
-                task.status = 'ASSIGNED'
+                task.status = 'IN_PROGRESS'
                 task.worker_id = worker_id
                 db.commit()
                 await process_task(task)
