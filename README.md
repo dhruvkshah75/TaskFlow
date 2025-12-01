@@ -81,7 +81,7 @@ TaskFlow/
 	`uvicorn api.main:app`
 4. **Start worker(s)**:  
 	`python3 worker/worker.py`
-5. **(Optional) Build and run C++ worker**:  
+5. **Build and run C++ worker**:  
 	See `worker_cpp/worker.cpp` and `worker_cpp/dockerfile`.
 
 

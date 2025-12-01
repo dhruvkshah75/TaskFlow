@@ -23,6 +23,7 @@ class Settings(BaseSettings):
     LOCKOUT_DURATION_SECONDS: int
 
     HEARTBEAT_INTERVAL_SECONDS: int
+    USER_RATE_LIMIT_PER_HOUR: int
 
     model_config = SettingsConfigDict(
         env_file=".env",

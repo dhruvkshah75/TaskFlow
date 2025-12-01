@@ -8,9 +8,10 @@ from core.database import SessionLocal
 worker_id = os.getenv("WORKER_ID", f"worker-{os.getpid()}-{uuid.uuid4()}")
 
 async def process_task(task_data):
-    pass
-    # after doing the task we update the data in the DB 
-    # where the status is made to COMPLETED 
+    print(f"Processing task {task_data.id}")
+    # Simulate some work based on task data
+    await asyncio.sleep(5)
+    print(f"Task {task_data.id} processed")
 
 
 async def worker_loop():
@@ -29,6 +30,8 @@ async def worker_loop():
                 task.worker_id = worker_id
                 db.commit()
                 await process_task(task)
+                task.status = 'COMPLETED'
+                db.commit()
             else:
                 pass
         else:
