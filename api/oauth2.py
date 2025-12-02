@@ -10,16 +10,14 @@ from core.config import settings
 # Use the dedicated redis client file
 from core.redis_client import get_redis
 from .utils import hash_api_key 
-import redis, json
+import redis, json, logging
 from datetime import datetime
 
+logger = logging.getLogger(__name__)
 
 # the auto error means that even if the token method fails the api key method might work so try that 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl='login', auto_error=False) 
 api_key_header = APIKeyHeader(name="X-API-Key", auto_error=False)
-
-
-
 
 # Config
 SECRET_KEY = settings.SECRET_KEY
@@ -27,8 +25,6 @@ ALGORITHM = settings.ALGORITHM
 ACCESS_TOKEN_EXPIRE_MINUTES = settings.ACCESS_TOKEN_EXPIRE_MINUTES
 MAX_FAILED_ATTEMPTS = settings.MAX_FAILED_ATTEMPTS
 LOCKOUT_DURATION_SECONDS = settings.LOCKOUT_DURATION_SECONDS
-
-
 
 
 def create_access_token(data: dict):
@@ -104,31 +100,29 @@ def get_current_user_token(token: str, db: Session, redis_client: redis.Redis, c
         token_data = verify_access_token(token, credentials_exception)
 
         user_id = token_data.id
-        user_profile_key = f"user:profile:{user_id}"
+        user_profile_key = f"user:profile:id:{user_id}"
         # 2. Check cache first
         cached_user_profile = redis_client.get(user_profile_key)
 
         if cached_user_profile:
-            # CACHE HIT: Parse the JSON and create a Pydantic model instance
+            logger.info(f"Cache HIT: User with the id:{id} found")
             user_dict = json.loads(cached_user_profile)
             user = schemas.UserResponse(**user_dict)
         else:
-            # CACHE MISS: Fetch from the database
+            logger.info(f"Cache MISS: Searching the database for user with the id:{id}")
             user_from_db = db.query(models.User).filter(models.User.id == user_id).first()
             if not user_from_db:
                 raise credentials_exception
 
-            # Create a dictionary of safe data to cache (no password)
             user_data_to_cache = {
                 "id": user_from_db.id,
                 "email": user_from_db.email,
                 "username": user_from_db.username
             }
-            
+
             # Populate the cache for the next request
             redis_client.setex(
-                user_profile_key,
-                3600,
+                user_profile_key, 3600,
                 json.dumps(user_data_to_cache)
             )
             user = user_from_db
