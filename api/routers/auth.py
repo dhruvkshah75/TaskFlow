@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import or_
 from core.redis_client import get_redis
 import redis, json, logging 
+from ..utils import cache_user_data, check_cache_user
 
 logger = logging.getLogger(__name__)  # to make logs 
 
@@ -22,10 +23,8 @@ def login(
     """
     Handles user authentication and caching.
     """
-    user_key_email = f"user:profile:email:{user_credentials.identifier}"
-    user_key_username = f"user:profile:username:{user_credentials.identifier}"
-
-    cached_user_data = redis_client.get(user_key_email) or redis_client.get(user_key_username)
+    # check the cache using the utils.py function 
+    cached_user_data = check_cache_user(redis_client, user_credentials.identifier)
 
     if cached_user_data:
         logger.info(f"Cache HIT: User:{user_credentials.identifier} found in the cache")
@@ -53,14 +52,9 @@ def login(
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, 
                             detail=f'Invalid Credentials')
 
-    # Cache user data
-    user_profile_key = f"user:profile:id:{user.id}"
-    user_data_to_cache = {
-        "id": user.id,
-        "email": user.email,
-        "username": user.username
-    }
-    redis_client.setex(user_profile_key, 3600, json.dumps(user_data_to_cache))
+    # Cache user data using utils function
+    user_cache = user.model_dump()
+    cache_user_data(redis_client, user_cache)
 
     # Create JWT access token
     access_token = oauth2.create_access_token(data={"user_id": user.id})

@@ -1,4 +1,4 @@
-from .. import schemas, utils, oauth2
+from .. import schemas, utils
 from fastapi import status, HTTPException, Depends, APIRouter
 from sqlalchemy.orm import Session
 from core.database import get_db
@@ -6,6 +6,7 @@ from core import models
 from sqlalchemy import or_
 from core.redis_client import get_redis
 import redis, json, logging
+from ..utils import cache_user_data, check_cache_user
 
 logger = logging.getLogger(__name__)
 
@@ -41,47 +42,45 @@ def create_user(user_credentials: schemas.UserCreate, db: Session=Depends(get_db
     This module is designed to ensure efficient user management while maintaining data integrity 
     and performance through effective caching and logging practices.
     """
-    user_key_email = f"user:profile:email:{user_credentials.email}"
-    user_key_username = f"user:profile:username:{user_credentials.username}"
+    # Check cache for email or username
+    cached_user_data = check_cache_user(redis_client, user_credentials.email) or check_cache_user(redis_client, user_credentials.username)
 
-    user_data_email = redis_client.get(user_key_email)
-    user_data_username = redis_client.get(user_key_username)
-
-    if user_data_email:
-        logger.info(f"Cache HIT: Email {user_credentials.email} already registered")
+    if cached_user_data:
+        # CACHE HIT
+        logger.info(f"Cache HIT: User data found for {user_credentials.email} or {user_credentials.username}")
+        if cached_user_data['email'] == user_credentials.email:
+            detail = "Email already registered"
+        else:
+            detail = "Username already registered"
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Email already registered"
+            detail=detail
         )
-    elif user_data_username:
-        logger.info(f"Cache HIT: Username {user_credentials.username} already registered")
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Username already registered"
-        ) 
     else:
-        logger.info(f"Cache MISS: Checking database for {user_credentials.email} or {user_credentials.username}")
-        existing_user = db.query(models.User).filter(
-            or_(
-                models.User.email == user_credentials.email,
-                models.User.username == user_credentials.username
-            )
-        ).first()
-        
-        if existing_user:
-            # Check which field already exists for a better error message
-            if existing_user.email == user_credentials.email:
-                detail = "Email already registered"
-            else:
-                detail = "Username already registered"
-            logger.info(f"Database HIT: {detail}")
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
-                                detail=detail)
-    
-    # hash the password 
+        # CACHE MISS
+        logger.info(f"Cache MISS: No user data found for {user_credentials.email} or {user_credentials.username}")
+
+    # CACHE MISS: Check in the database
+    existing_user = db.query(models.User).filter(
+        or_(
+            models.User.email == user_credentials.email,
+            models.User.username == user_credentials.username
+        )
+    ).first()
+
+    if existing_user:
+        # Check which field already exists for a better error message
+        if existing_user.email == user_credentials.email:
+            detail = "Email already registered"
+        else:
+            detail = "Username already registered"
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
+                            detail=detail)
+
+    # Hash the password
     hashed_password = utils.hash(user_credentials.password)
     user_credentials.password = hashed_password
-    
+
     # Create the new user from the input credentials
     new_user = models.User(**user_credentials.model_dump())
 
@@ -89,22 +88,13 @@ def create_user(user_credentials: schemas.UserCreate, db: Session=Depends(get_db
     db.commit()
     db.refresh(new_user)
 
-    add_user_key_email = f"user:profile:email:{new_user.email}"
-    add_user_key_username = f"user:profile:username:{new_user.username}"
-    add_user_key_id = f"user:profile:id:{new_user.id}"
-
-    user_data_to_cache = {
+    # Cache the new user data
+    logger.info(f"Caching user data for user_id: {new_user.id}")
+    cache_user_data(redis_client, {
         "id": new_user.id,
         "email": new_user.email,
         "username": new_user.username
-    }
-
-    redis_client.setex(add_user_key_email, 3600, 
-                       json.dumps(user_data_to_cache))
-    redis_client.setex(add_user_key_username, 3600,
-                       json.dumps(user_data_to_cache))
-    redis_client.setex(add_user_key_id, 3600,
-                       json.dumps(user_data_to_cache))
+    })
 
     return new_user
 
@@ -112,22 +102,26 @@ def create_user(user_credentials: schemas.UserCreate, db: Session=Depends(get_db
 
 @router.get("/{id}", response_model=schemas.UserResponse)
 def get_user(id: int, db: Session=Depends(get_db), redis_client: redis.Redis = Depends(get_redis)):
+    """
+    Fetch user details by user_id, utilizing Redis cache for optimization.
+    """
+    # Check cache for user data
+    cached_user_data = check_cache_user(redis_client, identifier_or_id=id)
 
-    user_key_id = f"user:profile:id:{id}"
-
-    user_data_cached = redis_client.get(user_key_id)
-
-    if user_data_cached:
+    if cached_user_data:
         logger.info(f"Cache HIT: User with id:{id} found")
-        user_data_json = json.loads(user_data_cached)
-        user_data = schemas.UserResponse(**user_data_json)
-
+        user_data = schemas.UserResponse(**cached_user_data)
     else:
-        logger.info(f"Cache MISS: Checking the databse for User with id:{id}")
+        logger.info(f"Cache MISS: Checking the database for User with id:{id}")
         user_search_query = db.query(models.User).filter(models.User.id == id)
-        if user_search_query.first() == None:
+        user = user_search_query.first()
+
+        if not user:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
-                                detail="User with id: {id} not found")
-        user_data = user_search_query.first()
+                                detail=f"User with id: {id} not found")
+
+        # Cache the user data for future requests
+        user_data = schemas.UserResponse(**user)
+        cache_user_data(redis_client, user_data.model_dump())
 
     return user_data

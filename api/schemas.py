@@ -3,6 +3,8 @@ from datetime import datetime
 from typing import Optional
 from core.models import TaskStatus
 
+# ===================== SCHEMAS RELATED TO USERS ==================================
+
 # schema for the user creation
 class UserCreate(BaseModel):
     email: EmailStr

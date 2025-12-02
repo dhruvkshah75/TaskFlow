@@ -9,9 +9,8 @@ from core.config import settings
 
 # Use the dedicated redis client file
 from core.redis_client import get_redis
-from .utils import hash_api_key 
-import redis, json, logging
-from datetime import datetime
+from .utils import hash_api_key, cache_user_data, check_cache_user 
+import redis, logging
 
 logger = logging.getLogger(__name__)
 
@@ -26,6 +25,7 @@ ACCESS_TOKEN_EXPIRE_MINUTES = settings.ACCESS_TOKEN_EXPIRE_MINUTES
 MAX_FAILED_ATTEMPTS = settings.MAX_FAILED_ATTEMPTS
 LOCKOUT_DURATION_SECONDS = settings.LOCKOUT_DURATION_SECONDS
 
+# ===================== HELPER FUNCTIONS FOR ACCESS TOKEN ==========================================
 
 def create_access_token(data: dict):
     to_encode = data.copy()
@@ -33,8 +33,6 @@ def create_access_token(data: dict):
     to_encode.update({"exp": expire})
     token = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
     return token
-
-
 
 
 def verify_access_token(token: str, credentials_exception):
@@ -48,7 +46,7 @@ def verify_access_token(token: str, credentials_exception):
         raise credentials_exception
     return token_data
 
-
+# ==================== HELPER FUNCITIONS FOR LOGIN FAILURES ========================================
 
 def handle_auth_failure(redis_client: redis.Redis, client_ip: str):
     """
@@ -83,7 +81,7 @@ def check_ip_lockout(redis_client: redis.Redis, client_ip: str):
         )
     
 
-
+# ============================== USER VERIFICATION USING JWT TOKEN ========================================
 
 def get_current_user_token(token: str, db: Session, redis_client: redis.Redis, client_ip: str):
     """
@@ -96,51 +94,43 @@ def get_current_user_token(token: str, db: Session, redis_client: redis.Redis, c
     )
 
     try:
-        # 1. Verify JWT signature and get user ID
+        # 1. Verify JWT signature and get user ID user id is stored in the payload of the JWT token
         token_data = verify_access_token(token, credentials_exception)
+        user_id = token_data.id 
 
-        user_id = token_data.id
-        user_profile_key = f"user:profile:id:{user_id}"
         # 2. Check cache first
-        cached_user_profile = redis_client.get(user_profile_key)
+        cached_user = check_cache_user(redis_client, user_id)
 
-        if cached_user_profile:
-            logger.info(f"Cache HIT: User with the id:{id} found")
-            user_dict = json.loads(cached_user_profile)
-            user = schemas.UserResponse(**user_dict)
-        else:
-            logger.info(f"Cache MISS: Searching the database for user with the id:{id}")
-            user_from_db = db.query(models.User).filter(models.User.id == user_id).first()
-            if not user_from_db:
-                raise credentials_exception
+        if cached_user:
+            # sicne it is already cached just return it
+            logger.info(f"Cache HIT: User data found for user_id: {user_id}")
+            return schemas.UserResponse(**cached_user) 
 
-            user_data_to_cache = {
-                "id": user_from_db.id,
-                "email": user_from_db.email,
-                "username": user_from_db.username
-            }
+        logger.info(f"Cache MISS: No user data found for user_id: {user_id}")
 
-            # Populate the cache for the next request
-            redis_client.setex(
-                user_profile_key, 3600,
-                json.dumps(user_data_to_cache)
-            )
-            user = user_from_db
+        # 3. CACHE MISS: Fetch from the database
+        user_from_db = db.query(models.User).filter(models.User.id == user_id).first()
+        if not user_from_db:
+            raise credentials_exception
 
-        # 3. SUCCESS! Forgive any IP-based lockouts
-        redis_client.delete(f"lockout:ip:{client_ip}")
-        redis_client.delete(f"failed:ip:{client_ip}")
+        # Create a dictionary of data to cache (
+        user_data_to_cache = {
+            "id": user_from_db.id,
+            "email": user_from_db.email,
+            "username": user_from_db.username
+        }
 
-        return user
+        cache_user_data(redis_client, user_data_to_cache)
+
+        return user_from_db
 
     except Exception:
-        # 4. FAILURE: Handle failed attempts and IP lockouts
+        # Handle failed attempts and IP lockouts
         handle_auth_failure(redis_client, client_ip)
         check_ip_lockout(redis_client, client_ip)
         raise credentials_exception
 
-
-
+# =============================== USER VERIFICATION USING API KEYS ==================================
 
 def get_user_from_api_key(api_key: str, db: Session, client_ip: str, redis_client: redis.Redis):
     """
@@ -181,6 +171,7 @@ def get_user_from_api_key(api_key: str, db: Session, client_ip: str, redis_clien
     return user
 
 
+# ============================== MAIN DEPENDENCY USED BY OTHER CRUD OPERATIONS ===========================
 
 def get_current_user(
     request: Request,
