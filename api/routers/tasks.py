@@ -5,6 +5,7 @@ from core import models
 from sqlalchemy.orm import Session
 from .. import schemas
 from typing import List, Optional
+from ..rate_limiter import user_rate_limiter
 
 router = APIRouter(
     tags = ['tasks'],
@@ -13,7 +14,8 @@ router = APIRouter(
 
 # ============================ TASK RELATED CRUD OPERATRION ==========================
 
-@router.post("/", status_code=status.HTTP_201_CREATED, response_model=schemas.TaskResponse)
+@router.post("/", status_code=status.HTTP_201_CREATED, response_model=schemas.TaskResponse,
+             dependencies = [Depends(user_rate_limiter)])
 def create_task(task: schemas.TaskCreate, db: Session=Depends(get_db),
                 current_user: models.User = Depends(get_current_user)):
     """
@@ -29,7 +31,8 @@ def create_task(task: schemas.TaskCreate, db: Session=Depends(get_db),
 
 
 
-@router.get("/", response_model=List[schemas.TaskResponse])
+@router.get("/", response_model=List[schemas.TaskResponse], 
+            dependencies = [Depends(user_rate_limiter)])
 def get_all_tasks(db: Session=Depends(get_db),
                   current_user: dict = Depends(get_current_user), 
                   limit: int=10, skip: int=0, search: Optional[str] = "",
@@ -55,7 +58,8 @@ def get_all_tasks(db: Session=Depends(get_db),
     
 
     
-@router.get("/{task_id}", response_model=schemas.TaskResponse)
+@router.get("/{task_id}", response_model=schemas.TaskResponse,
+            dependencies = [Depends(user_rate_limiter)])
 def get_a_task(task_id: int, db: Session=Depends(get_db),
                   current_user: models.User = Depends(get_current_user)):
     
@@ -70,7 +74,8 @@ def get_a_task(task_id: int, db: Session=Depends(get_db),
         return task
 
 
-@router.delete("/{task_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/{task_id}", status_code=status.HTTP_204_NO_CONTENT, 
+               dependencies = [Depends(user_rate_limiter)])
 def delete_task(task_id: int, db: Session=Depends(get_db),
                 current_user: models.User = Depends(get_current_user)):
     """

@@ -6,6 +6,7 @@ from sqlalchemy import or_
 from core.redis_client import get_redis
 import redis, json, logging 
 from ..utils import cache_user_data, check_cache_user
+from ..rate_limiter import user_rate_limiter
 
 logger = logging.getLogger(__name__)  # to make logs 
 
@@ -18,7 +19,7 @@ router = APIRouter(
 def login(
     user_credentials: schemas.UserLogin, 
     db: Session=Depends(database.get_db),
-    redis_client: redis.Redis = Depends(get_redis)  
+    redis_client: redis.Redis = Depends(get_redis)
 ):
     """
     Handles user authentication and caching.

@@ -3,12 +3,14 @@ from sqlalchemy.orm import Session
 from core.database import get_db
 from core.redis_client import get_redis
 import redis
+from ..rate_limiter import user_rate_limiter
 
 router = APIRouter(
     tags=["Status"]
 )
 
-@router.get("/status", status_code=status.HTTP_200_OK)
+@router.get("/status", status_code=status.HTTP_200_OK, 
+            dependencies = [Depends(user_rate_limiter)])
 def check_health(db: Session = Depends(get_db), 
                  redis_client: redis.Redis = Depends(get_redis)):
     """

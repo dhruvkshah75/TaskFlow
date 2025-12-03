@@ -1,7 +1,7 @@
 import redis, time
 from core.redis_client import get_redis 
 from fastapi import Request, status, Depends, HTTPException
-from oauth2 import get_current_user
+from .oauth2 import get_current_user
 from core.models import User
 from core.config import settings
 

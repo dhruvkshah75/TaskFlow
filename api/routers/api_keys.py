@@ -8,6 +8,7 @@ from ..utils import hash_api_key
 from typing import List
 from core.redis_client import get_redis
 from ..utils import cache_api_key
+from ..rate_limiter import user_rate_limiter
 
 
 router = APIRouter(
@@ -17,7 +18,8 @@ router = APIRouter(
 
 
 @router.post("/", status_code=status.HTTP_201_CREATED, 
-             response_model=schemas.ApiKeyResponse)
+             response_model=schemas.ApiKeyResponse, 
+             dependencies = [Depends(user_rate_limiter)])
 def create_api_key(key_options: schemas.createAPIkey,
                     db: Session = Depends(database.get_db), 
                     current_user: models.User = Depends(oauth2.get_current_user),
@@ -60,7 +62,8 @@ def create_api_key(key_options: schemas.createAPIkey,
 
 
 
-@router.get("/", response_model=List[schemas.ApiKeyInfo])
+@router.get("/", response_model=List[schemas.ApiKeyInfo], 
+            dependencies = [Depends(user_rate_limiter)])
 def get_user_api_keys(db: Session=Depends(database.get_db),
                       current_user: models.User = Depends(oauth2.get_current_user), 
                       redis_client: redis.Redis = Depends(get_redis)):
@@ -77,7 +80,8 @@ def get_user_api_keys(db: Session=Depends(database.get_db),
 
 
 
-@router.delete("/{key_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/{key_id}", status_code=status.HTTP_204_NO_CONTENT,
+               dependencies = [Depends(user_rate_limiter)])
 def remove_api_key(key_id: int, db: Session = Depends(database.get_db),
                    current_user: models.User = Depends(oauth2.get_current_user),
                    redis_client: redis.Redis = Depends(get_redis)):
