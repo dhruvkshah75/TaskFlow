@@ -106,7 +106,7 @@ def get_user(id: int, db: Session=Depends(get_db), redis_client: redis.Redis = D
     Fetch user details by user_id, utilizing Redis cache for optimization.
     """
     # Check cache for user data
-    cached_user_data = check_cache_user(redis_client, identifier_or_id=id)
+    cached_user_data = check_cache_user(redis_client, f"user:profile:{id}")
 
     if cached_user_data:
         logger.info(f"Cache HIT: User with id:{id} found")

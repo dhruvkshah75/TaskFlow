@@ -24,7 +24,7 @@ def login(
     Handles user authentication and caching.
     """
     # check the cache using the utils.py function 
-    cached_user_data = check_cache_user(redis_client, user_credentials.identifier)
+    cached_user_data = check_cache_user(redis_client, f"user:profile:{user_credentials.identifier}")
 
     if cached_user_data:
         logger.info(f"Cache HIT: User:{user_credentials.identifier} found in the cache")
@@ -53,7 +53,11 @@ def login(
                             detail=f'Invalid Credentials')
 
     # Cache user data using utils function
-    user_cache = user.model_dump()
+    user_cache = {
+        "id": user.id,
+        "email": user.email,
+        "username": user.username
+    }
     cache_user_data(redis_client, user_cache)
 
     # Create JWT access token

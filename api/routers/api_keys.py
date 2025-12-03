@@ -3,9 +3,10 @@ from sqlalchemy.orm import Session
 from datetime import datetime, timedelta, timezone
 from .. import schemas, oauth2
 from core import models, database
-import secrets
+import secrets, redis
 from ..utils import hash_api_key
 from typing import List
+from core.redis_client import get_redis
 
 
 router = APIRouter(
@@ -18,10 +19,11 @@ router = APIRouter(
              response_model=schemas.ApiKeyResponse)
 def create_api_key(key_options: schemas.createAPIkey,
                     db: Session = Depends(database.get_db), 
-                    current_user: models.User = Depends(oauth2.get_current_user)):
+                    current_user: models.User = Depends(oauth2.get_current_user),
+                    redis_client: redis.Redis = Depends(get_redis)):
     """
     Generate a new API key for the logged in user
-    The key will be valid for 30 days(defulalt) or some value 
+    The key will be valid for 30 days (default) or some value 
     """
     new_key  = f"tf_{secrets.token_urlsafe(32)}"
 
@@ -35,6 +37,17 @@ def create_api_key(key_options: schemas.createAPIkey,
 
     db.add(key_record)
     db.commit()
+    db.refresh(key_record)
+
+    # Cache the API key
+    api_key_key = f"user:profile:api_key:{key_record.key_hash}"
+    api_key_info = {
+        "api_key": key_record.key_hash,
+        "owner_id": key_record.owner_id,
+        "expires_at": key_record.expires_at if key_record.expires_at else None
+    }
+
+    
 
     return {
         "api_key": new_key,

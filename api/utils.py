@@ -1,7 +1,6 @@
 from passlib.context import CryptContext
 import hashlib
 import redis, json
-from typing import Union
 import logging
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -61,12 +60,12 @@ def cache_user_data(redis_client: redis.Redis, user: dict):
         "email": user['email'],
         "username": user['username']
     }
-    
+
     redis_client.setex(f"user:profile:{user['id']}", 3600, json.dumps(user_data))
     logger.info(f"Cached user data for user_id: {user['id']}")
 
 
-def check_cache_user(redis_client: redis.Redis, identifier_or_id: Union[str, int]):
+def check_cache_user(redis_client: redis.Redis, identifier_or_id: str):
     """
     Check if user data exists in the cache using email, username, or user_id.
     Args:

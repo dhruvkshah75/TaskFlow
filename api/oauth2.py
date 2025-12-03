@@ -99,7 +99,7 @@ def get_current_user_token(token: str, db: Session, redis_client: redis.Redis, c
         user_id = token_data.id 
 
         # 2. Check cache first
-        cached_user = check_cache_user(redis_client, user_id)
+        cached_user = check_cache_user(redis_client, f"user:profile:{user_id}")
 
         if cached_user:
             # sicne it is already cached just return it

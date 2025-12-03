@@ -11,6 +11,8 @@ router = APIRouter(
     prefix = "/tasks"
 )
 
+# ============================ TASK RELATED CRUD OPERATRION ==========================
+
 @router.post("/", status_code=status.HTTP_201_CREATED, response_model=schemas.TaskResponse)
 def create_task(task: schemas.TaskCreate, db: Session=Depends(get_db),
                 current_user: models.User = Depends(get_current_user)):
