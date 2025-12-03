@@ -11,6 +11,8 @@ from core.config import settings
 from core.redis_client import get_redis
 from .utils import hash_api_key, cache_user_data, check_cache_user 
 import redis, logging
+from .utils import cache_api_key, check_cache_api
+import json
 
 logger = logging.getLogger(__name__)
 
@@ -135,40 +137,69 @@ def get_current_user_token(token: str, db: Session, redis_client: redis.Redis, c
 def get_user_from_api_key(api_key: str, db: Session, client_ip: str, redis_client: redis.Redis):
     """
     Authenticates via API Key with IP-based lockout protection.
+    We check the api_key for 10 times and then we search the database,
+    as we have to update the latt_updated column to clean up unused api_keys.
     """
-    # 1. Check IP Lockout
+    # Check IP Lockout
     check_ip_lockout(redis_client, client_ip)
-
-    # 2. Hash the key for lookup
+    # Hash the key for lookup
     hashed_api_key = hash_api_key(api_key)
-    # 3. Fast Database Lookup with JOIN
-    result = db.query(models.ApiKey).filter(
-            models.ApiKey.key_hash == hashed_api_key,
-            models.ApiKey.is_active == True
+
+    attempt_key = f"api:cache:attempts:{hashed_api_key}"
+    attempts = redis_client.incr(attempt_key)
+
+    if attempts <= 15:
+        """ 
+        We allow 10 attempts of using cache as we have to update the last updated column,
+        which can be updated only by querying the database
+        """
+        cache_key = f"user:profile:api_key:{hashed_api_key}"
+        cached_api_data = check_cache_api(redis_client, cache_key)
+
+        if cached_api_data:
+            """ 
+            if the api_key is found then check if the key is expired or 
+            not and then we return the user who logged in.
+            """
+            expire_time = cached_api_data['expires_at']
+            if datetime.fromisoformat(expire_time) < datetime.now(timezone.utc):
+                handle_auth_failure(redis_client, client_ip)
+                return None
+
+            logger.info(f"Cache HIT: The api_key:{hashed_api_key} found")
+            
+            return models.User(**cached_api_data['user'])
+
+    else:
+        logger.info(f"Cache MISS the api_key: {hashed_api_key} not found")
+        redis_client.delete(attempt_key) # reset the counter of attempts 
+        # Fast Database Lookup with JOIN
+        result = db.query(models.ApiKey).filter(
+                models.ApiKey.key_hash == hashed_api_key,
+                models.ApiKey.is_active == True
+            ).first()
+        # 4. Handle Failure
+        if not result:
+            handle_auth_failure(redis_client, client_ip)
+            return None
+
+        api_key_record = result
+
+        # 5. Handle Success (Clear failures)
+        redis_client.delete(f"failed:ip:{client_ip}")
+        # 6. Check Expiration
+        if api_key_record.expires_at and api_key_record.expires_at < datetime.now(timezone.utc):
+            handle_auth_failure(redis_client, client_ip)
+            return None
+        # 7. Auditing: Update last_used_at
+        api_key_record.last_used_at = datetime.now(timezone.utc)
+        db.commit()
+
+        user = db.query(models.User).filter(
+            models.User.id == api_key_record.owner_id
         ).first()
-
-    # 4. Handle Failure
-    if not result:
-        handle_auth_failure(redis_client, client_ip)
-        return None
-
-    api_key_record = result
-
-    # 5. Handle Success (Clear failures)
-    redis_client.delete(f"failed:ip:{client_ip}")
-    # 6. Check Expiration
-    if api_key_record.expires_at and api_key_record.expires_at < datetime.now(timezone.utc):
-        return None
-    # 7. Auditing: Update last_used_at
-    api_key_record.last_used_at = datetime.now(timezone.utc)
-    db.commit()
-
-    # retrieving the user
-    user = db.query(models.User).filter(
-        models.User.id == api_key_record.owner_id
-    ).first()
-    
-    return user
+        
+        return user
 
 
 # ============================== MAIN DEPENDENCY USED BY OTHER CRUD OPERATIONS ===========================
