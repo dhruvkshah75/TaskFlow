@@ -67,6 +67,7 @@ def cache_user_data(redis_client: redis.Redis, user: dict):
     logger.info(f"Cached user data for user_id: {user['id']}")
 
 
+
 def check_cache_user(redis_client: redis.Redis, identifier_or_id: str):
     """
     Check if user data exists in the cache using email, username, or user_id.
@@ -115,6 +116,7 @@ def cache_api_key(redis_client: redis.Redis, api_key_data: dict, ttl: int=3600):
     }
     redis_client.setex(f"user:profile:api_key:{api_key_data['api_key']}", ttl, 
                        json.dumps(api_key_cache))
+    logger.info(f"Cached api key details for the user with id:{api_key_cache['owner_id']}")
 
 
 def check_cache_api(redis_client: redis.Redis, check_key: str):
@@ -128,3 +130,44 @@ def check_cache_api(redis_client: redis.Redis, check_key: str):
 
     logger.info(f"Cache MISS for {check_key}")
     return None  # Cache miss
+
+
+# ============== HELPER FUNCTION TO CREATE HASH FOR CACHE TASKS ===================
+def generate_title_hash(user_id: int, title: str) -> str:
+    """
+    Creates a deterministic hash based on the User ID and Task Title.
+    Useful for preventing a user from creating two tasks with the exact same title.
+    """
+    raw_string = f"{user_id}:{title.strip().lower()}" 
+    return hashlib.sha256(raw_string.encode()).hexdigest()
+
+
+# ================== CACHE UTIL FUNCTIONS FOR TASKS ==================
+def cache_task(redis_client: redis.Redis, task_data: dict):
+    """
+    We create a key based on the hash of the owner_id and title of the task 
+    and then store it in the cache with the key as {task:hash}
+    """
+    hash_val = generate_title_hash(int(task_data['owner_id']), task_data['title'])
+
+    task_key = f"task:{hash_val}"
+
+    redis_client.setex(task_key, 3600, json.dumps(task_data))
+    logger.info(f"Cached task detils for the user:{task_data['owner_id']}")
+
+
+def check_cache_task(redis_client: redis.Redis, task_title: str, owner_id: int):
+    """
+    Here we check the cache based on hashed value of task_title and owner_id
+    """
+    hash_val = generate_title_hash(owner_id, task_title)
+    
+    task_key = f"task:{hash_val}"
+
+    cached_task_data = redis_client.get(task_key)
+    if cached_task_data:
+        logger.info(f"Cache HIT for the key:{task_key}")
+        return json.loads(cached_task_data)
+    else:
+        logger.info(f"Cache MISS for the key:{task_key}")
+        return None

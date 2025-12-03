@@ -6,6 +6,11 @@ from sqlalchemy.orm import Session
 from .. import schemas
 from typing import List, Optional
 from ..rate_limiter import user_rate_limiter
+from ..utils import cache_task, check_cache_task
+from core.redis_client import get_redis
+import redis, logging
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(
     tags = ['tasks'],
@@ -17,12 +22,35 @@ router = APIRouter(
 @router.post("/", status_code=status.HTTP_201_CREATED, response_model=schemas.TaskResponse,
              dependencies = [Depends(user_rate_limiter)])
 def create_task(task: schemas.TaskCreate, db: Session=Depends(get_db),
-                current_user: models.User = Depends(get_current_user)):
+                current_user: models.User = Depends(get_current_user),
+                redis_client: redis.Redis = Depends(get_redis)):
     """
     Creates a new task for the currently logged in user
+    We also have to make sure that that the same task is not put up by the same user
+    Can be done with the help of caching
     """
-    new_task = models.Tasks(**task.model_dump(), owner_id = current_user.id)
+    task_data = check_cache_task(redis_client, task.title, current_user.id)
+    if task_data:
+        logger.info(f"Cache HIT: Found a task with the same title:{task.title}")
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT,
+                            detail=f"Task is already registered. Cannot register the same task again")
+    else:
+        logger.info(f"Cache MISS: Searching in the Database")
+        task_data = db.query(models.Tasks).filter(
+            models.Tasks.title == task.title,
+            models.Tasks.owner_id == current_user.id
+        ).first()
 
+        if task_data:
+            raise HTTPException(status_code=status.HTTP_409_CONFLICT,
+                            detail=f"Task is already registered. Cannot register the same task again")
+        
+    new_task = models.Tasks(**task.model_dump(), owner_id = current_user.id)
+    # create the cache of the new task 
+    cache_task(redis_client,{
+        "title": task.title,
+        "owner_id": current_user.id,
+    })
     db.add(new_task)
     db.commit()
     db.refresh(new_task)
