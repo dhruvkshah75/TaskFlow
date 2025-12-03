@@ -1,6 +1,5 @@
 # scripts/janitor.py
-
-from sqlalchemy.orm import Session
+from fastapi import Depends
 from sqlalchemy import or_, and_
 from datetime import datetime, timedelta, timezone
 
@@ -9,7 +8,7 @@ from core import models
 from core.redis_client import get_redis
 import redis
 
-def cleanup_inactive_keys(redis_client: redis.Redis):
+def cleanup_inactive_keys(redis_client: redis.Redis = Depends(get_redis)):
     """
     Deactivates API keys that haven't been used in the last 30 days.
     Also handles keys that were created > 30 days ago and NEVER used.
@@ -24,7 +23,6 @@ def cleanup_inactive_keys(redis_client: redis.Redis):
         # 3. AND EITHER:
         #    a. last_used_at is older than cutoff
         #    b. last_used_at is NULL (never used) AND created_at is older than cutoff
-        
         keys_to_deactivate = db.query(models.ApiKey).filter(
             models.ApiKey.is_active == True,
             or_(
@@ -32,7 +30,8 @@ def cleanup_inactive_keys(redis_client: redis.Redis):
                 and_(
                     models.ApiKey.last_used_at.is_(None),
                     models.ApiKey.created_at < cutoff_date,
-                )
+                ),
+                models.ApiKey.expires_at < datetime.now(timezone.utc)
             )
         ).all()
 
@@ -49,6 +48,7 @@ def cleanup_inactive_keys(redis_client: redis.Redis):
             redis_client.delete(key_cache)
 
         db.commit()
+        print(f"{len(keys_to_deactivate)} api_keys are deactivated")
 
     except Exception as e:
         print(f"Error during cleanup: {e}")
@@ -63,7 +63,7 @@ def delete_old_inactive_keys():
     db = SessionLocal()
 
     try:
-        threshold = datetime.now(timezone.utc) - timedelta(days=30)
+        threshold = datetime.now(timezone.utc) - timedelta(days=10)
         keys_to_delete = db.query(models.ApiKey).filter(
             models.ApiKey.is_active == False,
             models.ApiKey.deactivated_at < threshold
