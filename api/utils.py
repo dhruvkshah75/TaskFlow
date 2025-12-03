@@ -96,3 +96,23 @@ def check_cache_user(redis_client: redis.Redis, identifier_or_id: str):
 
 
 # ========================= CACHE UTIL FUNCTIONS FOR API-KEYS =================================
+def cache_api_key(redis_client: redis.Redis, api_key_data: dict):
+    """
+    The functions creates a cache of the api key with the main caching key as api_key id 
+    and creating mapping of api_key_hash with the api_key_id so cache can be checked 
+    both ways 
+    Args:
+        api_key_data is a dict which contains the hashed api key, the api_key id and 
+        expires at time 
+    """
+    redis_client.setex(f"api_key:{api_key_data['api_key']}", 3600, 
+                       f"user:profile:key_id:{api_key_data['id']}")
+    api_key_cache = {
+        "id": api_key_data['id'],
+        "api_key": api_key_data['api_key'],
+        "expires_at": api_key_data['expires_at']
+    }
+
+    redis_client.setex()
+
+    
