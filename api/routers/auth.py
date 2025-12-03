@@ -24,12 +24,24 @@ def login(
     Handles user authentication and caching.
     """
     # check the cache using the utils.py function 
-    cached_user_data = check_cache_user(redis_client, f"user:profile:{user_credentials.identifier}")
+    cached_user_data = check_cache_user(redis_client, f"user:identifier:{user_credentials.identifier}")
 
     if cached_user_data:
         logger.info(f"Cache HIT: User:{user_credentials.identifier} found in the cache")
-        user_data = json.loads(cached_user_data)
-        user = schemas.UserResponse(**user_data)
+        # cached_user_data may already be a dict (returned by check_cache_user)
+        if isinstance(cached_user_data, dict):
+            user = cached_user_data
+        elif isinstance(cached_user_data, (str, bytes, bytearray)):
+            # if it is a JSON string for some reason, decode it
+            user = json.loads(cached_user_data)
+
+        if not utils.verify(user_credentials.password, user['password']):
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, 
+                            detail=f'Invalid Credentials')
+        
+        access_token = oauth2.create_access_token(data={"user_id": user['id']})
+
+        return {"access_token": access_token, "token_type": "bearer"}
 
     else:
         # Query user by email or username
@@ -42,25 +54,24 @@ def login(
         )
         user = user_email_query.first()
 
-    # Account does not exist
-    if user is None:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, 
-                            detail=f'Invalid Credentials')
+        # Account does not exist
+        if user is None:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, 
+                                detail=f'Invalid Credentials')
+        # Password verification
+        if not utils.verify(user_credentials.password, user.password):
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, 
+                                detail=f'Invalid Credentials')
+        # Cache user data using utils function
+        user_cache = {
+            "id": user.id,
+            "email": user.email,
+            "username": user.username,
+            "password": user.password
+        }
+        cache_user_data(redis_client, user_cache)
 
-    # Password verification
-    if not utils.verify(user_credentials.password, user.password):
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, 
-                            detail=f'Invalid Credentials')
+        # Create JWT access token
+        access_token = oauth2.create_access_token(data={"user_id": user.id})
 
-    # Cache user data using utils function
-    user_cache = {
-        "id": user.id,
-        "email": user.email,
-        "username": user.username
-    }
-    cache_user_data(redis_client, user_cache)
-
-    # Create JWT access token
-    access_token = oauth2.create_access_token(data={"user_id": user.id})
-
-    return {"access_token": access_token, "token_type": "bearer"}
+        return {"access_token": access_token, "token_type": "bearer"}

@@ -93,7 +93,8 @@ def create_user(user_credentials: schemas.UserCreate, db: Session=Depends(get_db
     cache_user_data(redis_client, {
         "id": new_user.id,
         "email": new_user.email,
-        "username": new_user.username
+        "username": new_user.username,
+        "password": new_user.password
     })
 
     return new_user

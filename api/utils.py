@@ -51,14 +51,15 @@ def cache_user_data(redis_client: redis.Redis, user: dict):
         user (object): User object containing id, email, and username.
     """
     # Create mappings for email and username to user_id
-    redis_client.setex(f"email:{user['email']}", 3600, f"user:profile:id:{user['id']}")
-    redis_client.setex(f"username:{user['username']}", 3600, f"user:profile:id:{user['id']}")
+    redis_client.setex(f"user:identifier:{user['email']}", 3600, f"user:profile:{user['id']}")
+    redis_client.setex(f"user:identifier:{user['username']}", 3600, f"user:profile:{user['id']}")
 
     # Store user data using user_id
     user_data = {
         "id": user['id'],
         "email": user['email'],
-        "username": user['username']
+        "username": user['username'],
+        "password": user['password']
     }
 
     redis_client.setex(f"user:profile:{user['id']}", 3600, json.dumps(user_data))
@@ -74,11 +75,14 @@ def check_cache_user(redis_client: redis.Redis, identifier_or_id: str):
     Returns:
         dict or None: Cached user data if found, otherwise None.
     """
-    # Check if the identifier is a user_id
+    # Check if the identifier is already a user profile key (pointer)
+    # e.g. "user:profile:{id}"
     if str(identifier_or_id).startswith("user:profile:"):
         user_profile_key = str(identifier_or_id)
     else:
-        user_profile_key = redis_client.get(f"email:{identifier_or_id}") or redis_client.get(f"username:{identifier_or_id}")
+        # identifier_or_id is expected to be email or username
+        user_profile_key = redis_client.get(identifier_or_id)
+        logger.info(user_profile_key)
 
     if user_profile_key:
         # Fetch user data using user_id

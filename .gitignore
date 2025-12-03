@@ -4,3 +4,4 @@ markdown/
 __pycache__
 .vscode/
 TaskFlow/
+venv/

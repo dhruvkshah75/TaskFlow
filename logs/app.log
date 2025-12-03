@@ -1,0 +1,67 @@
+2025-12-03 15:50:26,953 INFO api.utils: Cache miss for user:identifier:dhruv_shah
+2025-12-03 15:50:26,953 INFO api.routers.auth: Cache MISS: User:dhruv_shah not found in cache
+2025-12-03 15:50:27,172 INFO api.utils: Cached user data for user_id: 4
+2025-12-03 15:53:33,275 INFO api.utils: Cache miss for user:identifier:dhruv_shah
+2025-12-03 15:53:33,275 INFO api.routers.auth: Cache MISS: User:dhruv_shah not found in cache
+2025-12-03 15:53:33,498 INFO api.utils: Cached user data for user_id: 4
+2025-12-03 15:54:43,633 INFO api.utils: Cache hit for dhruv_shah
+2025-12-03 15:54:43,633 INFO api.routers.auth: Cache HIT: User:dhruv_shah found in the cache
+2025-12-03 15:56:24,221 INFO api.utils: None
+2025-12-03 15:56:24,221 INFO api.utils: Cache miss for user:identifier:dhruv_shah
+2025-12-03 15:56:24,221 INFO api.routers.auth: Cache MISS: User:dhruv_shah not found in cache
+2025-12-03 15:56:24,441 INFO api.utils: Cached user data for user_id: 4
+2025-12-03 16:03:46,189 INFO api.utils: None
+2025-12-03 16:03:46,189 INFO api.utils: Cache miss for user:identifier:dhruv_shah
+2025-12-03 16:03:46,189 INFO api.routers.auth: Cache MISS: User:dhruv_shah not found in cache
+2025-12-03 16:03:46,404 INFO api.utils: Cached user data for user_id: 4
+2025-12-03 16:05:25,989 INFO api.utils: None
+2025-12-03 16:05:25,989 INFO api.utils: Cache miss for user:identifier:dhruv_shah
+2025-12-03 16:05:25,989 INFO api.routers.auth: Cache MISS: User:dhruv_shah not found in cache
+2025-12-03 16:05:26,208 INFO api.utils: Cached user data for user_id: 4
+2025-12-03 16:07:47,919 INFO api.utils: user:profile:4
+2025-12-03 16:07:47,920 INFO api.utils: Cache hit for user:identifier:dhruv_shah
+2025-12-03 16:07:47,920 INFO api.routers.auth: Cache HIT: User:dhruv_shah found in the cache
+2025-12-03 16:12:19,477 INFO api.utils: user:profile:4
+2025-12-03 16:12:19,477 INFO api.utils: Cache hit for user:identifier:dhruv_shah
+2025-12-03 16:12:19,477 INFO api.routers.auth: Cache HIT: User:dhruv_shah found in the cache
+2025-12-03 16:12:58,717 INFO api.utils: user:profile:4
+2025-12-03 16:12:58,717 INFO api.utils: Cache hit for user:identifier:dhruv_shah
+2025-12-03 16:12:58,717 INFO api.routers.auth: Cache HIT: User:dhruv_shah found in the cache
+2025-12-03 16:18:52,860 INFO api.utils: user:profile:4
+2025-12-03 16:18:52,860 INFO api.utils: Cache hit for user:identifier:dhruv_shah
+2025-12-03 16:18:52,860 INFO api.routers.auth: Cache HIT: User:dhruv_shah found in the cache
+2025-12-03 16:22:12,034 INFO api.utils: None
+2025-12-03 16:22:12,034 INFO api.utils: Cache miss for user:identifier:dhruv_shah
+2025-12-03 16:22:12,034 INFO api.routers.auth: Cache MISS: User:dhruv_shah not found in cache
+2025-12-03 16:22:12,256 INFO api.utils: Cached user data for user_id: 4
+2025-12-03 16:22:19,779 INFO api.utils: user:profile:4
+2025-12-03 16:22:19,779 INFO api.utils: Cache hit for user:identifier:dhruv_shah
+2025-12-03 16:22:19,779 INFO api.routers.auth: Cache HIT: User:dhruv_shah found in the cache
+2025-12-03 16:24:20,087 INFO api.utils: None
+2025-12-03 16:24:20,088 INFO api.utils: Cache miss for user:identifier:dhruv_shah
+2025-12-03 16:24:20,088 INFO api.routers.auth: Cache MISS: User:dhruv_shah not found in cache
+2025-12-03 16:24:20,296 INFO api.utils: Cached user data for user_id: 4
+2025-12-03 16:24:22,835 INFO api.utils: user:profile:4
+2025-12-03 16:24:22,835 INFO api.utils: Cache hit for user:identifier:dhruv_shah
+2025-12-03 16:24:22,835 INFO api.routers.auth: Cache HIT: User:dhruv_shah found in the cache
+2025-12-03 16:31:14,024 INFO api.utils: user:profile:4
+2025-12-03 16:31:14,024 INFO api.utils: Cache hit for user:identifier:dhruv_shah
+2025-12-03 16:31:14,024 INFO api.routers.auth: Cache HIT: User:dhruv_shah found in the cache
+2025-12-03 16:32:19,485 INFO api.utils: user:profile:4
+2025-12-03 16:32:19,485 INFO api.utils: Cache hit for user:identifier:dhruv_shah
+2025-12-03 16:32:19,485 INFO api.routers.auth: Cache HIT: User:dhruv_shah found in the cache
+2025-12-03 16:33:49,602 INFO api.utils: user:profile:4
+2025-12-03 16:33:49,602 INFO api.utils: Cache hit for user:identifier:dhruv_shah
+2025-12-03 16:33:49,602 INFO api.routers.auth: Cache HIT: User:dhruv_shah found in the cache
+2025-12-03 16:36:50,365 INFO api.utils: Cache hit for user:profile:4
+2025-12-03 16:36:50,365 INFO api.routers.user: Cache HIT: User with id:4 found
+2025-12-03 16:38:58,332 INFO api.utils: None
+2025-12-03 16:38:58,332 INFO api.utils: Cache miss for vivan@gmail.com
+2025-12-03 16:38:58,332 INFO api.utils: None
+2025-12-03 16:38:58,332 INFO api.utils: Cache miss for vivan_jain
+2025-12-03 16:38:58,333 INFO api.routers.user: Cache MISS: No user data found for vivan@gmail.com or vivan_jain
+2025-12-03 16:38:58,561 INFO api.routers.user: Caching user data for user_id: 5
+2025-12-03 16:38:58,561 INFO api.utils: Cached user data for user_id: 5
+2025-12-03 16:39:25,368 INFO api.utils: user:profile:5
+2025-12-03 16:39:25,368 INFO api.utils: Cache hit for user:identifier:vivan@gmail.com
+2025-12-03 16:39:25,368 INFO api.routers.auth: Cache HIT: User:vivan@gmail.com found in the cache
