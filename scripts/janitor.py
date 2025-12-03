@@ -6,8 +6,10 @@ from datetime import datetime, timedelta, timezone
 
 from core.database import SessionLocal
 from core import models
+from core.redis_client import get_redis
+import redis
 
-def cleanup_inactive_keys():
+def cleanup_inactive_keys(redis_client: redis.Redis):
     """
     Deactivates API keys that haven't been used in the last 30 days.
     Also handles keys that were created > 30 days ago and NEVER used.
@@ -15,7 +17,6 @@ def cleanup_inactive_keys():
     db = SessionLocal()
     try:
         cutoff_date = datetime.now(timezone.utc) - timedelta(days=30)
-        current_time = datetime.now(timezone.utc) 
         # Query for keys to deactivate
         # Logic for deactivating keys:
         # 1. Must be currently Active (is_active = True)
@@ -39,10 +40,13 @@ def cleanup_inactive_keys():
             print("No stale keys found. System clean.")
             return
 
-        # Deactivate them
+        # Deactivate them and also delete them from the redis cache
         for key in keys_to_deactivate:
             key.is_active = False
             key.deactivated_at = datetime.now(timezone.utc)
+
+            key_cache = f"user:profile:api_key:{key.key_hash}"
+            redis_client.delete(key_cache)
 
         db.commit()
 

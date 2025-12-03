@@ -2,6 +2,7 @@ from passlib.context import CryptContext
 import hashlib
 import redis, json
 import logging
+from datetime import datetime
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 logger = logging.getLogger(__name__)
@@ -96,7 +97,7 @@ def check_cache_user(redis_client: redis.Redis, identifier_or_id: str):
 
 
 # ========================= CACHE UTIL FUNCTIONS FOR API-KEYS =================================
-def cache_api_key(redis_client: redis.Redis, api_key_data: dict):
+def cache_api_key(redis_client: redis.Redis, api_key_data: dict, ttl: int=3600):
     """
     The functions creates a cache of the api key with the main caching key as api_key id 
     and creating mapping of api_key_hash with the api_key_id so cache can be checked 
@@ -105,14 +106,25 @@ def cache_api_key(redis_client: redis.Redis, api_key_data: dict):
         api_key_data is a dict which contains the hashed api key, the api_key id and 
         expires at time 
     """
-    redis_client.setex(f"api_key:{api_key_data['api_key']}", 3600, 
-                       f"user:profile:key_id:{api_key_data['id']}")
     api_key_cache = {
         "id": api_key_data['id'],
         "api_key": api_key_data['api_key'],
-        "expires_at": api_key_data['expires_at']
+        "expires_at": datetime.isoformat(api_key_data['expires_at']),
+        "owner_id": api_key_data['owner_id'],
+        "user": api_key_data['user']
     }
+    redis_client.setex(f"user:profile:api_key:{api_key_data['api_key']}", ttl, 
+                       json.dumps(api_key_cache))
 
-    redis_client.setex()
 
-    
+def check_cache_api(redis_client: redis.Redis, check_key: str):
+    """
+    Checks the cache for the api key with using the hashed key 
+    """
+    user_data = redis_client.get(check_key)
+    if user_data:
+        logger.info(f"Cache HIT for {check_key}")
+        return json.loads(user_data)
+
+    logger.info(f"Cache MISS for {check_key}")
+    return None  # Cache miss

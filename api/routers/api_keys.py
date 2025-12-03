@@ -7,6 +7,7 @@ import secrets, redis
 from ..utils import hash_api_key
 from typing import List
 from core.redis_client import get_redis
+from ..utils import cache_api_key
 
 
 router = APIRouter(
@@ -39,15 +40,18 @@ def create_api_key(key_options: schemas.createAPIkey,
     db.commit()
     db.refresh(key_record)
 
-    # Cache the API key
-    api_key_key = f"user:profile:api_key:{key_record.key_hash}"
+    current_user_dict = schemas.UserResponse.model_validate(current_user).model_dump()
+    current_user_dict.pop("created_at", None) # remove the created at feild 
+    # Cache the API key with the user dict as one of its feild
     api_key_info = {
+        "id": key_record.id,
         "api_key": key_record.key_hash,
         "owner_id": key_record.owner_id,
-        "expires_at": key_record.expires_at if key_record.expires_at else None
+        "expires_at": key_record.expires_at if key_record.expires_at else None,
+        "user": current_user_dict
     }
 
-    
+    cache_api_key(redis_client, api_key_info)
 
     return {
         "api_key": new_key,
@@ -58,27 +62,29 @@ def create_api_key(key_options: schemas.createAPIkey,
 
 @router.get("/", response_model=List[schemas.ApiKeyInfo])
 def get_user_api_keys(db: Session=Depends(database.get_db),
-                      current_user: models.User = Depends(oauth2.get_current_user)):
+                      current_user: models.User = Depends(oauth2.get_current_user), 
+                      redis_client: redis.Redis = Depends(get_redis)):
     
     """
     Get the list of all the API keys for the current user.
     This does not return the keys themselves, only the safe metadata
     """
-
     keys = db.query(models.ApiKey).filter(
         models.ApiKey.owner_id == current_user.id
     ).all()
 
+    return keys
 
 
 
 @router.delete("/{key_id}", status_code=status.HTTP_204_NO_CONTENT)
 def remove_api_key(key_id: int, db: Session = Depends(database.get_db),
-                   current_user: models.User = Depends(oauth2.get_current_user)):
+                   current_user: models.User = Depends(oauth2.get_current_user),
+                   redis_client: redis.Redis = Depends(get_redis)):
     """
     Remove (delete) an API key by its ID.
+    if we find the api key which is to be deleted we search the cache and remove it from there too 
     """
-
     key_query = db.query(models.ApiKey).filter(
         models.ApiKey.id == key_id
     )
@@ -98,5 +104,8 @@ def remove_api_key(key_id: int, db: Session = Depends(database.get_db),
     
     key_query.delete(synchronize_session=False)
     db.commit()
+
+    cache_key = f"user:profile:key_id:{key_id}"
+    redis_client.delete(cache_key)
 
     return
