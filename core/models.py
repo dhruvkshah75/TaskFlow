@@ -13,7 +13,7 @@ class TaskStatus(str, enum.Enum):
     IN_PROGRESS = "IN_PROGRESS"
     COMPLETED = "COMPLETED"
     FAILED = "FAILED"
-    RETRYING = "RETRYING"     # Optional: Helpful to distinguish from Pending
+    RETRYING = "RETRYING"    
 
 class EventType(str, enum.Enum):
     CREATED = "CREATED"
@@ -23,6 +23,10 @@ class EventType(str, enum.Enum):
     COMPLETED = "COMPLETED"
     FAILED = "FAILED"
     RETRIED = "RETRIED"
+
+class PriorityType(str, enum.Enum):
+    low = "low",
+    high = "high"
 
 
 class User(Base):
@@ -40,7 +44,10 @@ class Tasks(Base):
     __tablename__ = "tasks"
 
     id = Column(Integer, primary_key=True, nullable=False)
-    title = Column(String, nullable=False)
+    title = Column(String, nullable=False) # tasks can have the same title but the title and payload cant be same togethor
+    payload = Column(String, nullable=False)
+    priority = Column(SQLAlchemyEnum(PriorityType), server_default=PriorityType.low, 
+                      nullable=False)
     owner_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"),
                       nullable=False)
     status = Column(SQLAlchemyEnum(TaskStatus), nullable=False,
@@ -54,7 +61,6 @@ class Tasks(Base):
     # the defualt value is the time at which the task was created 
     updated_at = Column(TIMESTAMP(timezone=True), 
                         server_default=func.now(), onupdate=func.now())
-    result = Column(JSONB, nullable=True)
     
     owner = relationship("User")
     events = relationship("TaskEvents", back_populates="task")

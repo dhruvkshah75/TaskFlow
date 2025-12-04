@@ -133,13 +133,31 @@ def check_cache_api(redis_client: redis.Redis, check_key: str):
 
 
 # ============== HELPER FUNCTION TO CREATE HASH FOR CACHE TASKS ===================
-def generate_title_hash(user_id: int, title: str) -> str:
+def generate_task_hash(user_id: int, title: str, payload: str) -> str:
     """
-    Creates a deterministic hash based on the User ID and Task Title.
-    Useful for preventing a user from creating two tasks with the exact same title.
+    Creates a deterministic SHA256 hash based on the user_id, task title and
+    optional payload. The payload (if dict/list) is canonicalized with
+    sorted keys so equivalent payloads produce the same hash.
+    This is used for cache keys and lightweight duplicate detection.
     """
-    raw_string = f"{user_id}:{title.strip().lower()}" 
-    return hashlib.sha256(raw_string.encode()).hexdigest()
+    title_norm = (title or "").strip().lower()
+
+    if payload is None:
+        payload_str = ""
+    else:
+        # Canonicalize JSON-like payloads for deterministic hashing
+        try:
+            if isinstance(payload, (dict, list)):
+                payload_str = json.dumps(payload, sort_keys=True, 
+                                         separators=(",", ":"), ensure_ascii=False)
+            else:
+                payload_str = str(payload)
+        except Exception:
+            # Fallback to string conversion if json serialization fails
+            payload_str = str(payload)
+
+    raw_string = f"{int(user_id)}:{title_norm}:{payload_str}"
+    return hashlib.sha256(raw_string.encode("utf-8")).hexdigest()
 
 
 # ================== CACHE UTIL FUNCTIONS FOR TASKS ==================
@@ -148,7 +166,8 @@ def cache_task(redis_client: redis.Redis, task_data: dict):
     We create a key based on the hash of the owner_id and title of the task 
     and then store it in the cache with the key as {task:hash}
     """
-    hash_val = generate_title_hash(int(task_data['owner_id']), task_data['title'])
+    # Support optional payload in task_data for more precise duplicate detection
+    hash_val = generate_task_hash(int(task_data['owner_id']), task_data['title'], task_data['payload'])
 
     task_key = f"task:{hash_val}"
 
@@ -156,11 +175,12 @@ def cache_task(redis_client: redis.Redis, task_data: dict):
     logger.info(f"Cached task detils for the user:{task_data['owner_id']}")
 
 
-def check_cache_task(redis_client: redis.Redis, task_title: str, owner_id: int):
+def check_cache_task(redis_client: redis.Redis, task_title: str, owner_id: int, payload: str):
     """
     Here we check the cache based on hashed value of task_title and owner_id
     """
-    hash_val = generate_title_hash(owner_id, task_title)
+    # Backwards compatible: payload is optional and may be added later
+    hash_val = generate_task_hash(owner_id, task_title, payload)
     
     task_key = f"task:{hash_val}"
 

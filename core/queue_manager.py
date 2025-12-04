@@ -113,9 +113,13 @@ class QueueManager:
         logger.info("Scheduler loop started (Waiting for leadership).")
         while self.running:
             if self.is_leader:
-                # Logic would go here to check DB for scheduled tasks
-                # For now, we just sleep to simulate activity
-                pass
+                db = SessionLocal()
+                try:
+                    now = datetime.now(timezone.utc)
+                    # find tasks that are scheduled 
+                    pass
+                except Exception as e:
+                    pass
             
             time.sleep(SCHEDULER_INTERVAL_S)
         logger.info("Scheduler loop stopped.")

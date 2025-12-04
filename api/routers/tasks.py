@@ -9,6 +9,7 @@ from ..rate_limiter import user_rate_limiter
 from ..utils import cache_task, check_cache_task
 from core.redis_client import get_redis
 import redis, logging
+from datetime import datetime, timezone, timedelta
 
 logger = logging.getLogger(__name__)
 
@@ -29,7 +30,7 @@ def create_task(task: schemas.TaskCreate, db: Session=Depends(get_db),
     We also have to make sure that that the same task is not put up by the same user
     Can be done with the help of caching
     """
-    task_data = check_cache_task(redis_client, task.title, current_user.id)
+    task_data = check_cache_task(redis_client, task.title, current_user.id, task.payload)
     if task_data:
         logger.info(f"Cache HIT: Found a task with the same title:{task.title}")
         raise HTTPException(status_code=status.HTTP_409_CONFLICT,
@@ -38,6 +39,7 @@ def create_task(task: schemas.TaskCreate, db: Session=Depends(get_db),
         logger.info(f"Cache MISS: Searching in the Database")
         task_data = db.query(models.Tasks).filter(
             models.Tasks.title == task.title,
+            models.Tasks.payload == task.payload,
             models.Tasks.owner_id == current_user.id,
             models.Tasks.status != 'COMPLETED'
         ).first()
@@ -46,11 +48,19 @@ def create_task(task: schemas.TaskCreate, db: Session=Depends(get_db),
             raise HTTPException(status_code=status.HTTP_409_CONFLICT,
                             detail=f"Task is already registered. Cannot register the same task again")
         
-    new_task = models.Tasks(**task.model_dump(), owner_id = current_user.id)
+    schedule_time = task.scheduled_at  
+    scheduled_for = datetime.now(timezone.utc) + timedelta(minutes=schedule_time)
+
+    new_task = models.Tasks(
+        **task.model_dump(exclude={"scheduled_at"}),   
+        scheduled_at=scheduled_for,                    
+        owner_id=current_user.id
+    )
     # create the cache of the new task 
     cache_task(redis_client,{
         "title": task.title,
         "owner_id": current_user.id,
+        "payload": task.payload
     })
     db.add(new_task)
     db.commit()
