@@ -38,7 +38,8 @@ def create_task(task: schemas.TaskCreate, db: Session=Depends(get_db),
         logger.info(f"Cache MISS: Searching in the Database")
         task_data = db.query(models.Tasks).filter(
             models.Tasks.title == task.title,
-            models.Tasks.owner_id == current_user.id
+            models.Tasks.owner_id == current_user.id,
+            models.Tasks.status != 'COMPLETED'
         ).first()
 
         if task_data:
