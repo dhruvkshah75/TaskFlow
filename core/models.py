@@ -8,17 +8,21 @@ from sqlalchemy.dialects.postgresql import JSONB
 import enum
 
 class TaskStatus(str, enum.Enum):
-    PENDING = "PENDING"
+    SCHEDULED = "SCHEDULED"   # <--- Added: Waiting for timer
+    PENDING = "PENDING"       # Ready in Redis Queue
     IN_PROGRESS = "IN_PROGRESS"
     COMPLETED = "COMPLETED"
     FAILED = "FAILED"
+    RETRYING = "RETRYING"     # Optional: Helpful to distinguish from Pending
 
 class EventType(str, enum.Enum):
-    WORKER_ASSIGNED = "WORKER_ASSIGNED"
+    CREATED = "CREATED"
+    QUEUED = "QUEUED"
+    PICKED_UP = "PICKED_UP"
+    IN_PROGRESS = "IN_PROGRESS"
     COMPLETED = "COMPLETED"
     FAILED = "FAILED"
     RETRIED = "RETRIED"
-    CREATED = "CREATED"
 
 
 class User(Base):
@@ -44,6 +48,9 @@ class Tasks(Base):
     created_at = Column(TIMESTAMP(timezone=True), nullable=False,
                         server_default=text('now()'))
     worker_id = Column(String, nullable=True)
+    retry_count = Column(Integer, default=0)
+    # If status is SCHEDULED, this field tells the QueueManager when to push it to Redis
+    scheduled_at = Column(TIMESTAMP(timezone=True), nullable=True)
     # the defualt value is the time at which the task was created 
     updated_at = Column(TIMESTAMP(timezone=True), 
                         server_default=func.now(), onupdate=func.now())

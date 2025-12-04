@@ -13,8 +13,10 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int
 
     # Redis settings
-    REDIS_HOST: str 
-    REDIS_PORT: int
+    REDIS_PORT_HIGH: int
+    REDIS_HOST_HIGH: str
+    REDIS_PORT_LOW: int
+    REDIS_HOST_LOW: str 
 
     # some rate limiting constants 
     RATE_LIMIT_PER_HOUR: int
