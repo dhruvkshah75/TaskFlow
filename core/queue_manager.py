@@ -34,17 +34,23 @@ end
 def push_task(queue_name: str, message: dict, priority: str = "low") -> bool:
     """
     Pushes a task to the specific Redis instance based on priority.
-    Used by the API to submit jobs.
+    Returns True on success, False on failure.
     """
     try:
         r = get_redis_client(priority)
         json_message = json.dumps(message)
         r.rpush(queue_name, json_message)
+        try:
+            # logging the length of the queue 
+            length = r.llen(queue_name)
+            logger.debug(f"Pushed task {message.get('task_id')} to {queue_name} (len={length})")
+        except Exception:
+            # non-fatal, ignore if LLEN fails
+            pass
         return True
     except Exception as e:
         logger.error(f"Error pushing to {priority} Redis: {e}")
         return False
-    
 
 # ===================== LEADER COORDINATOR =====================
 class QueueManager:
@@ -123,44 +129,80 @@ class QueueManager:
     # ===================== LOOPS RUN ONLY BY THE LEADER =======================
     def scheduler_loop(self):
         """
-        Placeholder for Future Scheduling.
-        Moves tasks from 'PENDING' -> 'QUEUED' when their time comes.
+        Efficient scheduler:
+        - Uses index (status, scheduled_at) by ordering on scheduled_at
+        - Claims rows with FOR UPDATE SKIP LOCKED to avoid races between schedulers
+        - Pushes to Redis, then batch-updates DB rows that were successfully queued
         """
         logger.info("Scheduler loop started (Waiting for leadership).")
         while self.running:
-            if self.is_leader:
-                db = SessionLocal()
-                try:
-                    now = datetime.now(timezone.utc)
-                    # find tasks that are scheduled by seaching in databse
-                    # LOGIC UPDATE: We look for PENDING tasks (waiting in DB) to move to QUEUED (Redis)
-                    tasks = db.query(Tasks).filter(
+            if not self.is_leader:
+                time.sleep(SCHEDULER_INTERVAL_S)
+                continue
+            db = SessionLocal()
+            try:
+                now = datetime.now(timezone.utc)
+                # Select candidate tasks using the index-friendly query
+                # NOTE: with_for_update(skip_locked=True) prevents locking contention
+                candidates = (
+                    db.query(Tasks)
+                    .filter(
                         Tasks.status == TaskStatus.PENDING,
+                        Tasks.scheduled_at != None,
                         Tasks.scheduled_at <= now
-                    ).limit(100).all()
-
-                    if tasks:
-                        logger.info(f"Scheduler found {len(tasks)} tasks.")
-                        for task in tasks:
-                            # 2. Push to Redis (Standard Default Queue)
-                            payload = {"task_id": task.id}
-                            # Assuming priority is stored in task.priority or defaulting to low
-                            success = push_task("default", payload, priority="low")
-                            
-                            if success:
-                                task.status = TaskStatus.QUEUED  # that is put in the queue 
-                                task.updated_at = datetime.now(timezone.utc)
-                        
-                        db.commit() # <--- FIXED: Commit needed to save status change
-                except Exception as e:
-                    logger.error(f"Error in Scheduler: {e}")
-                    db.rollback()
-                finally:
+                    )
+                    .order_by(Tasks.scheduled_at.asc())
+                    .limit(100)
+                    .with_for_update(skip_locked=True)
+                    .all()
+                )
+                if not candidates:
+                    # nothing to do
                     db.close()
-            
-            # <--- FIXED: Sleep moved to end of loop so it runs immediately on start
-            time.sleep(SCHEDULER_INTERVAL_S)
+                    time.sleep(SCHEDULER_INTERVAL_S)
+                    continue
 
+                logger.info(f"Scheduler found {len(candidates)} tasks.")
+
+                # Try push each candidate to Redis, collect IDs that succeeded
+                queued_ids = []
+                for task in candidates:
+                    payload = {"task_id": task.id}
+                    # use the task.priority if present or default to 'low'
+                    priority = getattr(task, "priority", "low") or "low"
+                    success = push_task("default", payload, priority=priority)
+                    if success:
+                        queued_ids.append(task.id)
+                    else:
+                        logger.error(f"Failed to push task {task.id} to Redis; leaving status PENDING")
+
+                # Batch-update DB for all queued ids
+                if queued_ids:
+                    now_upd = datetime.now(timezone.utc)
+                    # single UPDATE for performance
+                    db.query(Tasks).filter(Tasks.id.in_(queued_ids)).update(
+                        {
+                            Tasks.status: TaskStatus.QUEUED,
+                            Tasks.updated_at: now_upd
+                        },
+                        synchronize_session=False
+                    )
+                    db.commit()
+                    logger.info(f"Marked {len(queued_ids)} tasks as QUEUED in DB.")
+                else:
+                    # nothing queued, just rollback to release locks
+                    db.rollback()
+            except Exception as e:
+                logger.error(f"Error in Scheduler: {e}")
+                db.rollback()
+            finally:
+                # make sure session closed in all situations
+                try:
+                    db.close()
+                except Exception:
+                    pass
+            # sleep before next poll
+            time.sleep(SCHEDULER_INTERVAL_S)
         logger.info("Scheduler loop stopped.")
 
 
@@ -195,8 +237,7 @@ class QueueManager:
                     logger.error(f"Error in PEL Scanner: {e}")
                     db.rollback()
                 finally:
-                    db.close()
-            
+                    db.close()  
             time.sleep(RECLAIM_INTERVAL_S)
 
     def _recover_task(self, db, task: Tasks, reason):

@@ -25,7 +25,7 @@ class EventType(str, enum.Enum):
     RETRIED = "RETRIED"
 
 class PriorityType(str, enum.Enum):
-    low = "low",
+    low = "low"
     high = "high"
 
 

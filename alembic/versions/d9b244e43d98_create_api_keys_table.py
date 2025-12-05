@@ -1,8 +1,8 @@
-"""create the api_keys table
+"""create api keys table
 
-Revision ID: 5276c55cca0d
-Revises: e78c1637c05c
-Create Date: 2025-11-28 10:03:52.685688
+Revision ID: d9b244e43d98
+Revises: 132dd8c3882b
+Create Date: 2025-12-06 02:21:00.128877
 
 """
 from typing import Sequence, Union
@@ -12,8 +12,8 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision: str = '5276c55cca0d'
-down_revision: Union[str, Sequence[str], None] = 'e78c1637c05c'
+revision: str = 'd9b244e43d98'
+down_revision: Union[str, Sequence[str], None] = '132dd8c3882b'
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
@@ -28,6 +28,7 @@ def upgrade() -> None:
         sa.Column('is_active', sa.Boolean(), server_default='TRUE', nullable=False),
         sa.Column('expires_at', sa.TIMESTAMP(timezone=True), nullable=True),
         sa.Column('last_used_at', sa.TIMESTAMP(timezone=True), nullable=True),
+        sa.Column('deactivated_at', sa.TIMESTAMP(timezone=True), nullable=True),
         sa.ForeignKeyConstraint(['owner_id'], ['users.id'], ondelete='CASCADE'),
         sa.PrimaryKeyConstraint('id'),
         sa.UniqueConstraint('key_hash')
