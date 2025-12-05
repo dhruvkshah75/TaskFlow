@@ -10,8 +10,6 @@ RENEW_INTERVAL_S = 3      # Try to renew every 3 seconds
 
 SCHEDULER_INTERVAL_S = 5  # How often to check for scheduled tasks
 RECLAIM_INTERVAL_S = 10   # How often to check for stuck tasks 
-# Assume worker crash if stuck in 'processing' > 5 mins
-VISIBILITY_TIMEOUT_MINUTES = 5 
 MAX_RETRIES = 3
 
 # Logger configuration
