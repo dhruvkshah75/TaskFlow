@@ -8,17 +8,25 @@ from sqlalchemy.dialects.postgresql import JSONB
 import enum
 
 class TaskStatus(str, enum.Enum):
-    PENDING = "PENDING"
+    PENDING = "PENDING"       # Ready in Redis Queue
+    IN_PROGRESS = "IN_PROGRESS"
+    QUEUED = "QUEUED"
+    COMPLETED = "COMPLETED"
+    FAILED = "FAILED"
+    RETRYING = "RETRYING"    
+
+class EventType(str, enum.Enum):
+    CREATED = "CREATED"
+    QUEUED = "QUEUED"
+    PICKED_UP = "PICKED_UP"
     IN_PROGRESS = "IN_PROGRESS"
     COMPLETED = "COMPLETED"
     FAILED = "FAILED"
-
-class EventType(str, enum.Enum):
-    WORKER_ASSIGNED = "WORKER_ASSIGNED"
-    COMPLETED = "COMPLETED"
-    FAILED = "FAILED"
     RETRIED = "RETRIED"
-    CREATED = "CREATED"
+
+class PriorityType(str, enum.Enum):
+    low = "low"
+    high = "high"
 
 
 class User(Base):
@@ -36,7 +44,10 @@ class Tasks(Base):
     __tablename__ = "tasks"
 
     id = Column(Integer, primary_key=True, nullable=False)
-    title = Column(String, nullable=False)
+    title = Column(String, nullable=False) # tasks can have the same title but the title and payload cant be same togethor
+    payload = Column(String, nullable=False)
+    priority = Column(SQLAlchemyEnum(PriorityType), server_default=PriorityType.low, 
+                      nullable=False)
     owner_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"),
                       nullable=False)
     status = Column(SQLAlchemyEnum(TaskStatus), nullable=False,
@@ -44,10 +55,12 @@ class Tasks(Base):
     created_at = Column(TIMESTAMP(timezone=True), nullable=False,
                         server_default=text('now()'))
     worker_id = Column(String, nullable=True)
+    retry_count = Column(Integer, default=0)
+    # If status is SCHEDULED, this field tells the QueueManager when to push it to Redis
+    scheduled_at = Column(TIMESTAMP(timezone=True), nullable=True)
     # the defualt value is the time at which the task was created 
     updated_at = Column(TIMESTAMP(timezone=True), 
                         server_default=func.now(), onupdate=func.now())
-    result = Column(JSONB, nullable=True)
     
     owner = relationship("User")
     events = relationship("TaskEvents", back_populates="task")

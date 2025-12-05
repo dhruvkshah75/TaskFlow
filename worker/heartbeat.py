@@ -1,9 +1,8 @@
-import time 
-from core.redis_client import redis_client
+import time, redis
 from core.config import settings 
 from datetime import datetime, timezone
 
-def send_heartbeat(worker_id):
+def send_heartbeat(worker_id, redis_client: redis.Redis):
     while True:
         heartbeat_key = f"worker:{worker_id}:heartbeat"
         key_value = datetime.now(timezone.utc).isoformat()

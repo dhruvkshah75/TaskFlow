@@ -41,6 +41,9 @@ class TaskBase(BaseModel):
     title: str
 
 class TaskCreate(TaskBase):
+    payload: str
+    priority: Optional[str] = "low"
+    scheduled_at: int
     pass 
 
 class TaskUpdate(TaskBase):
@@ -53,6 +56,7 @@ class TaskResponse(BaseModel):
     status: TaskStatus
     created_at: datetime
     owner_id: int
+    scheduled_at: datetime
     class Config:
         from_attributes = True
 
