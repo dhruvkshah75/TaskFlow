@@ -8,9 +8,9 @@ from sqlalchemy.dialects.postgresql import JSONB
 import enum
 
 class TaskStatus(str, enum.Enum):
-    SCHEDULED = "SCHEDULED"   # <--- Added: Waiting for timer
     PENDING = "PENDING"       # Ready in Redis Queue
     IN_PROGRESS = "IN_PROGRESS"
+    QUEUED = "QUEUED"
     COMPLETED = "COMPLETED"
     FAILED = "FAILED"
     RETRYING = "RETRYING"    

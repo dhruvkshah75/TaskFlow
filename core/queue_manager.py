@@ -2,6 +2,7 @@ import redis, uuid, logging, json, threading, time, signal
 from .redis_client import get_redis, get_redis_client
 from datetime import timezone, timedelta, datetime
 from .database import SessionLocal
+from .models import Tasks, TaskStatus 
 
 LEADER_KEY = "taskflow:leader"
 LEASE_TTL_MS = 10000      # Leader lease time (10 seconds)
@@ -39,7 +40,7 @@ def push_task(queue_name: str, message: dict, priority: str = "low") -> bool:
     """
     try:
         r = get_redis_client(priority)
-        json_message = json.dump(message)
+        json_message = json.dumps(message)
         r.rpush(queue_name, json_message)
         return True
     except Exception as e:
@@ -103,12 +104,29 @@ class QueueManager:
             logger.error(f"Error renewing lease: {e}")
             return False
         
+    def maintain_leadership(self):
+        """ 
+        Bakgoround loop that keeps running to maintain leadership.
+        If the leader crashes then this will help to elect the new leader 
+        """
+        while self.running:
+            if self.is_leader:
+                if not self.renew_lease():
+                    logger.info(f"Instance {self.instance_id} LOST leadership.")
+                    self.is_leader = False
+            else:
+                if self.try_aquire_leader():
+                    logger.info(f"Instance {self.instance_id} ACQUIRED leadership.")
+                    self.is_leader = True
+            # Sleep less than the TTL to ensure we renew in time
+            time.sleep(RENEW_INTERVAL_S)
+        
 
     # ===================== LOOPS RUN ONLY BY THE LEADER =======================
     def scheduler_loop(self):
         """
         Placeholder for Future Scheduling.
-        Moves tasks from 'SCHEDULED' -> 'QUEUED' when their time comes.
+        Moves tasks from 'PENDING' -> 'QUEUED' when their time comes.
         """
         logger.info("Scheduler loop started (Waiting for leadership).")
         while self.running:
@@ -116,12 +134,35 @@ class QueueManager:
                 db = SessionLocal()
                 try:
                     now = datetime.now(timezone.utc)
-                    # find tasks that are scheduled 
-                    pass
+                    # find tasks that are scheduled by seaching in databse
+                    # LOGIC UPDATE: We look for PENDING tasks (waiting in DB) to move to QUEUED (Redis)
+                    tasks = db.query(Tasks).filter(
+                        Tasks.status == TaskStatus.PENDING,
+                        Tasks.scheduled_at <= now
+                    ).limit(100).all()
+
+                    if tasks:
+                        logger.info(f"Scheduler found {len(tasks)} tasks.")
+                        for task in tasks:
+                            # 2. Push to Redis (Standard Default Queue)
+                            payload = {"task_id": task.id}
+                            # Assuming priority is stored in task.priority or defaulting to low
+                            success = push_task("default", payload, priority="low")
+                            
+                            if success:
+                                task.status = TaskStatus.QUEUED  # that is put in the queue 
+                                task.updated_at = datetime.now(timezone.utc)
+                        
+                        db.commit() # <--- FIXED: Commit needed to save status change
                 except Exception as e:
-                    pass
+                    logger.error(f"Error in Scheduler: {e}")
+                    db.rollback()
+                finally:
+                    db.close()
             
+            # <--- FIXED: Sleep moved to end of loop so it runs immediately on start
             time.sleep(SCHEDULER_INTERVAL_S)
+
         logger.info("Scheduler loop stopped.")
 
 
@@ -131,4 +172,80 @@ class QueueManager:
         Checks for tasks stuck in 'IN_PROGRESS' for too long (indicating worker crash).
         Re-queues them or marks them as failed.
         """
-        pass
+        logger.info("PEL Scanner (Recovery) started. ")
+        while self.running: 
+            if self.is_leader:
+                db = SessionLocal()
+                try:
+                    # LOGIC UPDATE: We only recover tasks that are claimed by a worker (IN_PROGRESS)
+                    running_tasks = db.query(Tasks).filter(
+                        Tasks.status == TaskStatus.IN_PROGRESS
+                    ).all()
+
+                    for task in running_tasks:
+                        if not task.worker_id:
+                            self._recover_task(db, task, "No worker assigned")
+                            continue
+                            
+                        # 2. Check Redis for Worker Heartbeat
+                        heartbeat_key = f"worker:{task.worker_id}:heartbeat"
+                        if not self.redis.exists(heartbeat_key):
+                            self._recover_task(db, task, f"Worker {task.worker_id} died")
+                    
+                    db.commit() # <--- FIXED: Commit needed
+                except Exception as e:
+                    logger.error(f"Error in PEL Scanner: {e}")
+                    db.rollback()
+                finally:
+                    db.close()
+            
+            time.sleep(RECLAIM_INTERVAL_S)
+
+    def _recover_task(self, db, task: Tasks, reason):
+        """Helper to retry or fail a task."""
+        if task.retry_count < MAX_RETRIES:
+            logger.warning(f"Recovering Task {task.id}: {reason}")
+            
+            # Re-push to Redis
+            success = push_task("default", {"task_id": task.id})
+
+            if success:
+                # Reset to QUEUED so a new worker can pick it up
+                task.status = TaskStatus.QUEUED
+                task.worker_id = None
+                task.retry_count += 1
+                task.updated_at = datetime.now(timezone.utc)
+        else:
+            logger.error(f"Task {task.id} FAILED: {reason} (Max retries)")
+            task.status = TaskStatus.FAILED
+            task.worker_id = None
+            task.updated_at = datetime.now(timezone.utc)
+
+    # ======================= ENTRY POINT ==========================================
+    def start(self): 
+        """
+        Starts all the threads
+        """
+
+        logger.info(f"Starting Queue Manager {self.instance_id}...")
+
+        # 1. Start Leadership Maintainer
+        t_leader = threading.Thread(target=self.maintain_leadership, daemon=True)
+        t_leader.start()
+        # 2. Start Scheduler
+        t_scheduler = threading.Thread(target=self.scheduler_loop, daemon=True)
+        t_scheduler.start()
+        # 3. Start PEL Scanner
+        t_scanner = threading.Thread(target=self.pel_scanner_loop, daemon=True)
+        t_scanner.start()
+
+        # Keep main thread alive to handle signals
+        try:
+            while self.running:
+                time.sleep(1)
+        except KeyboardInterrupt:
+            self.shutdown(None, None)
+
+if __name__ == "__main__":
+    qm = QueueManager()
+    qm.start()
