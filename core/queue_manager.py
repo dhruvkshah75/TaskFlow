@@ -1,4 +1,4 @@
-import redis, uuid, logging, json, threading, time, signal
+import uuid, logging, json, threading, time, signal
 from .redis_client import get_redis, get_redis_client
 from datetime import timezone, timedelta, datetime
 from .database import SessionLocal
@@ -14,8 +14,12 @@ MAX_RETRIES = 3
 
 # Logger configuration
 logging.basicConfig(
-    level=logging.INFO, 
-    format='%(asctime)s - [QueueManager] - %(levelname)s - %(message)s'
+    level=logging.INFO,
+    format='%(asctime)s - [QueueManager] - %(levelname)s - %(message)s',
+    handlers=[
+        logging.FileHandler("logs/queue_manager.log"), # Writes to the file
+        logging.StreamHandler()                        # Writes to the terminal
+    ]
 )
 logger = logging.getLogger(__name__)
 
