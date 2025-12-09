@@ -15,6 +15,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 QUEUE_NAME = "default"
+PROCESSING_QUEUE = f"processing:{QUEUE_NAME}"
 
 class AsyncWorker:
 
@@ -35,20 +36,55 @@ class AsyncWorker:
         logger.info(f"Worker:{self.worker_id} listening on queue.")
         while self.running:
             try:
-                # brpop is async
-                #Timeout allows loop to check self.running periodically.
-                result = await self.redis.brpop(QUEUE_NAME, timeout=1.0)
-                if result:
-                    queue, raw_data = result
+                # Atomically move an item from the queue to a processing queue.
+                # Prefer BLMOVE (atomic blocking move) when available. Fall back to
+                # BRPOPLPUSH for older Redis versions / clients.
+                raw_data = None
+                try:
+                    if hasattr(self.redis, 'blmove'):
+                        # Try blmove first (atomic blocking move). If it fails for any
+                        # reason (server doesn't support it, different signature, etc.)
+                        # fall back to brpoplpush.
+                        try:
+                            raw_data = await self.redis.blmove(QUEUE_NAME, PROCESSING_QUEUE, 'RIGHT', 'LEFT', 1)
+                        except Exception as e:
+                            logger.debug(f"blmove failed ({e}), falling back to brpoplpush")
+                            raw_data = await self.redis.brpoplpush(QUEUE_NAME, PROCESSING_QUEUE, 1)
+                    else:
+                        # brpoplpush(src, dst, timeout)
+                        raw_data = await self.redis.brpoplpush(QUEUE_NAME, PROCESSING_QUEUE, 1)
+
                     if raw_data:
                         try:
                             data = json.loads(raw_data)
-                            logger.info(f"Worker:{self.worker_id} recieved Task: {data.get('task_id')}")
-
-                            await self.handler.handle_task(data)
-
                         except json.JSONDecodeError:
                             logger.error(f"worker:{self.worker_id} failed to decode to json")
+                            # remove the malformed message from processing queue
+                            try:
+                                await self.redis.lrem(PROCESSING_QUEUE, 0, raw_data)
+                            except Exception:
+                                logger.exception("Failed to remove malformed message from processing queue")
+                            continue
+
+                        logger.info(f"Worker:{self.worker_id} received Task: {data.get('task_id')}")
+
+                        try:
+                            await self.handler.handle_task(data)
+                        except Exception:
+                            logger.exception("Handler raised during processing")
+                        finally:
+                            # Always attempt to remove the message from the processing
+                            # queue once handler.run returns (success or failure).
+                            try:
+                                if raw_data:
+                                    await self.redis.lrem(PROCESSING_QUEUE, 0, raw_data)
+                            except Exception:
+                                logger.exception("Failed to remove item from processing queue in finally")
+                except Exception as e:
+                    # Prevent CPU spin if Redis connection drops
+                    if self.running:
+                        logger.error(f"Worker {self.worker_id} Loop Error: {e}")
+                        await asyncio.sleep(2)
             except Exception as e:
                 # Prevent CPU spin if Redis connection drops
                 if self.running:
@@ -57,7 +93,7 @@ class AsyncWorker:
 
         logger.info(f"Worker:{self.worker_id} shutting down ..")
         await self.heartbeat.stop()
-        await self.redis.close()
+        await self.redis.aclose()
 
     def request_shutdown(self):
         logger.info("Shutdown signal received.")
