@@ -34,18 +34,20 @@ class TaskHandler:
             return
         
         task_type, payload, task_title = claim_result
-        # 2. Find Handler (Fallback to title if type is missing)
+        # 2. Find Handler (Fallback to title if type is missing, then to "default")
         handler_key = task_type or task_title
-        handler = HANDLERS.get(handler_key)
+        handler = HANDLERS.get(handler_key) or HANDLERS.get("default")
 
         if not handler:
-            logger.error(f"No handler found for key: '{handler_key}'")
+            logger.error(f"No handler found for key: '{handler_key}' and no default handler")
             # If there's no handler registered for this task key, instead of
             # failing immediately we increment the retry counter and requeue
             # the task (up to max_retries). This gives operators a chance to
             # register a handler or recover transient misconfiguration.
             await loop.run_in_executor(None, self._retry_or_fail_sync, task_id, f"No handler: {handler_key}")
             return
+        
+        logger.info(f"Using handler '{handler_key}' for task {task_id}")
         # 3. Execute
         try:
             if asyncio.iscoroutinefunction(handler):

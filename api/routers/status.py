@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, status, HTTPException
 from sqlalchemy.orm import Session
+from sqlalchemy import text
 from core.database import get_db
 from core.redis_client import get_redis
 import redis
@@ -9,8 +10,7 @@ router = APIRouter(
     tags=["Status"]
 )
 
-@router.get("/status", status_code=status.HTTP_200_OK, 
-            dependencies = [Depends(user_rate_limiter)])
+@router.get("/status", status_code=status.HTTP_200_OK)
 def check_health(db: Session = Depends(get_db), 
                  redis_client: redis.Redis = Depends(get_redis)):
     """
@@ -18,7 +18,7 @@ def check_health(db: Session = Depends(get_db),
     """
     try:
         # 1. Check database connection
-        db.execute('SELECT 1')
+        db.execute(text('SELECT 1'))
         # 2. Check Redis connection
         redis_client.ping()
 

@@ -1,0 +1,129 @@
+services:
+  api:
+    build:
+      context: .
+      dockerfile: api/Dockerfile
+    image: taskflow_api:local
+    container_name: taskflow_api
+    working_dir: /app
+    command: sh -c "alembic upgrade head && uvicorn api.main:app --host 0.0.0.0 --port 8000 --reload"
+    volumes:
+      - ./:/app
+      - /app/venv
+    env_file: .env
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis_low:
+        condition: service_healthy
+      redis_high:
+        condition: service_started
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8000/status || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 40s
+    networks:
+      - taskflow_net
+
+  worker:
+    build:
+      context: .
+      dockerfile: worker/Dockerfile
+    image: taskflow_worker:local
+    container_name: taskflow_worker
+    working_dir: /app
+    volumes:
+      - ./:/app
+      - /app/venv
+    env_file: .env
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis_low:
+        condition: service_healthy
+    restart: always
+    networks:
+      - taskflow_net
+
+  queue_manager:
+    build:
+      context: .
+      dockerfile: core/Dockerfile
+    image: taskflow_queue_manager:local
+    container_name: taskflow_queue_manager
+    working_dir: /app
+    volumes:
+      - ./:/app
+      - /app/venv
+    env_file: .env
+    depends_on:
+      api:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+      redis_low:
+        condition: service_healthy
+      redis_high:
+        condition: service_started
+    restart: unless-stopped
+    networks:
+      - taskflow_net
+
+  postgres:
+    image: postgres:15
+    container_name: taskflow_postgres
+    environment:
+      - POSTGRES_DB=taskflow_db
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=password123
+    # Map container Postgres port to a non-conflicting host port (avoid host's existing Postgres)
+    ports:
+      - "15432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d taskflow_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - taskflow_net
+
+  redis_low:
+    image: redis:7
+    container_name: taskflow_redis_low
+    command: ["redis-server", "--save", "60", "1"]
+    volumes:
+      - redisdata_low:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    networks:
+      - taskflow_net
+
+  redis_high:
+    image: redis:7
+    container_name: taskflow_redis_high
+    command: ["redis-server", "--save", "60", "1"]
+    ports:
+      - "6380:6379"
+    volumes:
+      - redisdata_high:/data
+    networks:
+      - taskflow_net
+
+volumes:
+  pgdata:
+  redisdata_low:
+  redisdata_high:
+
+networks:
+  taskflow_net:
+    driver: bridge
