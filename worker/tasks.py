@@ -26,3 +26,6 @@ HANDLERS = {
     "dummy": dummy_handler,
     "echo": sync_echo_handler,
 }
+
+# Provide a default handler key so the worker can fall back when no type/title matches.
+HANDLERS.setdefault("default", dummy_handler)

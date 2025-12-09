@@ -11,6 +11,8 @@ RENEW_INTERVAL_S = 3      # Try to renew every 3 seconds
 SCHEDULER_INTERVAL_S = 5  # How often to check for scheduled tasks
 RECLAIM_INTERVAL_S = 10   # How often to check for stuck tasks 
 MAX_RETRIES = 3
+PROCESSING_QUEUE_PREFIX = "processing"
+PROCESSING_RECLAIM_S = 30  # Age (s) after which a processing item is considered stale
 
 # Logger configuration
 logging.basicConfig(
@@ -244,6 +246,81 @@ class QueueManager:
                     db.close()  
             time.sleep(RECLAIM_INTERVAL_S)
 
+    # loop runniing in the background for adding stale tasks back in the queue
+    def processing_reclaimer_loop(self):
+        """Scan `processing:*` lists and move stale items back to the main queue.
+        We look at the `processing:default` list (where workers atomically move
+        items) and for each element we check the DB row. If the DB row is not
+        IN_PROGRESS and it has not been updated recently, we consider the
+        processing item stale and move it back to the main queue.
+        """
+        logger.info("Processing reclaimer started.")
+        low_redis = get_redis_client('low')
+        processing_queue = f"{PROCESSING_QUEUE_PREFIX}:default"
+        while self.running:
+            if not self.is_leader:
+                time.sleep(RECLAIM_INTERVAL_S)
+                continue
+
+            try:
+                items = low_redis.lrange(processing_queue, 0, -1) or []
+                if not items:
+                    time.sleep(RECLAIM_INTERVAL_S)
+                    continue
+
+                now = datetime.now(timezone.utc)
+                for raw in items:
+                    try:
+                        payload = json.loads(raw)
+                        task_id = payload.get('task_id')
+                    except Exception:
+                        # If payload is unreadable, remove it to avoid blocking
+                        logger.warning("Removing unreadable payload from processing queue")
+                        try:
+                            low_redis.lrem(processing_queue, 0, raw)
+                        except Exception:
+                            logger.exception("Failed to remove unreadable payload")
+                        continue
+
+                    db = SessionLocal()
+                    try:
+                        task = db.query(Tasks).filter(Tasks.id == task_id).first()
+                        if not task:
+                            # No DB row, remove the message
+                            low_redis.lrem(processing_queue, 0, raw)
+                            continue
+
+                        # If the task is currently IN_PROGRESS, skip it
+                        if task.status == TaskStatus.IN_PROGRESS:
+                            continue
+
+                        # If task hasn't been updated recently, requeue it
+                        updated_at = getattr(task, 'updated_at', None)
+                        age = (now - updated_at).total_seconds() if updated_at else None
+                        if age is None or age > PROCESSING_RECLAIM_S:
+                            logger.warning(f"Reclaiming stale processing item for task {task_id}")
+                            # Move the message back to main queue and update DB
+                            try:
+                                low_redis.lrem(processing_queue, 0, raw)
+                                low_redis.lpush('default', raw)
+                            except Exception:
+                                logger.exception("Failed to move item back to default queue")
+
+                            task.status = TaskStatus.QUEUED
+                            task.worker_id = None
+                            task.updated_at = now
+                            db.commit()
+                    except Exception:
+                        logger.exception("Error while examining processing item; rolling back DB")
+                        db.rollback()
+                    finally:
+                        db.close()
+
+                time.sleep(RECLAIM_INTERVAL_S)
+            except Exception:
+                logger.exception("Error in processing reclaimer")
+                time.sleep(RECLAIM_INTERVAL_S)
+
     def _recover_task(self, db, task: Tasks, reason):
         """Helper to retry or fail a task."""
         if task.retry_count < MAX_RETRIES:
@@ -281,6 +358,9 @@ class QueueManager:
         # 3. Start PEL Scanner
         t_scanner = threading.Thread(target=self.pel_scanner_loop, daemon=True)
         t_scanner.start()
+        # 4. Start Processing Reclaimer (moves stale items from processing back)
+        t_reclaimer = threading.Thread(target=self.processing_reclaimer_loop, daemon=True)
+        t_reclaimer.start()
 
         # Keep main thread alive to handle signals
         try:
