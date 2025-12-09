@@ -6,7 +6,11 @@ from .task_handler import TaskHandler
 
 logging.basicConfig(
     level=logging.INFO, 
-    format='%(asctime)s - [Worker] - %(levelname)s - %(message)s'
+    format='%(asctime)s - [Worker] - %(levelname)s - %(message)s',
+        handlers=[
+        logging.FileHandler("logs/worker.log"), # Writes to the file
+        logging.StreamHandler()                 # Writes to the terminal
+    ]
 )
 logger = logging.getLogger(__name__)
 

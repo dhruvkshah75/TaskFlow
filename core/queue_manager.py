@@ -1,6 +1,6 @@
 import uuid, logging, json, threading, time, signal
 from .redis_client import get_redis, get_redis_client
-from datetime import timezone, timedelta, datetime
+from datetime import timezone, datetime
 from .database import SessionLocal
 from .models import Tasks, TaskStatus 
 
