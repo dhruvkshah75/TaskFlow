@@ -10,7 +10,7 @@ services:
     volumes:
       - ./:/app
       - /app/venv
-    env_file: .env
+    env_file: .env.docker
     ports:
       - "8000:8000"
     depends_on:
@@ -35,12 +35,11 @@ services:
       context: .
       dockerfile: worker/Dockerfile
     image: taskflow_worker:local
-    container_name: taskflow_worker
     working_dir: /app
     volumes:
       - ./:/app
       - /app/venv
-    env_file: .env
+    env_file: .env.docker
     depends_on:
       postgres:
         condition: service_healthy
@@ -49,6 +48,8 @@ services:
     restart: always
     networks:
       - taskflow_net
+    deploy:
+      replicas: 4
 
   queue_manager:
     build:
@@ -60,7 +61,7 @@ services:
     volumes:
       - ./:/app
       - /app/venv
-    env_file: .env
+    env_file: .env.docker
     depends_on:
       api:
         condition: service_healthy
@@ -112,8 +113,7 @@ services:
     image: redis:7
     container_name: taskflow_redis_high
     command: ["redis-server", "--save", "60", "1"]
-    ports:
-      - "6380:6379"
+    # No external port exposure needed - services communicate internally
     volumes:
       - redisdata_high:/data
     networks:

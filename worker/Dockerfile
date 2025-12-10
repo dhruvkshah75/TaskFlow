@@ -14,7 +14,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
-ENV PYTHONUNBUFFERED=1
+# this forces to print logs immediately 
+ENV PYTHONUNBUFFERED=1  
 
 CMD ["python", "-m", "worker.main"]
 

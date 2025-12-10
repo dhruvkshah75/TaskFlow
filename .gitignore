@@ -9,3 +9,4 @@ logs/
 README_UPDATED.md
 core/queue_manager.md
 PRODUCTION_ROADMAP.md
+.env.docker
