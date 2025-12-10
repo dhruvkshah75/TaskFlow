@@ -6,6 +6,8 @@ TaskFlow is a distributed task queue system designed to manage, schedule, and ex
 
 ## Architecture
 
+![TaskFlow architecture](images/architecture.jpeg)
+
 - **API Service (`api/`)**: Exposes endpoints for task submission, status checks, API key management, and authentication.
 - **Worker Service (`worker/`, `worker_cpp/`)**: Processes tasks from the queue. Python workers are implemented in `worker/worker.py`, and C++ workers are scaffolded in `worker_cpp/worker.cpp`.
 - **Database (`core/database.py`, models)**: Stores users, API keys, and task metadata.
@@ -70,6 +72,30 @@ TaskFlow/
 ## Maintenance
 
 - **Janitor Script**: Run `python3 -m scripts.janitor` to deactivate stale API keys and delete old inactive keys.
+
+## Example `.env` (minimal)
+
+Create a `.env` file in the repository root with the following values for local development (adjust secrets for production):
+
+```env
+DATABASE_URL=""
+SECRET_KEY=replace_with_a_secure_random_key
+ALGORITHM=HS256
+ACCESS_TOKEN_EXPIRE_MINUTES=180
+
+REDIS_HOST_HIGH=redis_high
+REDIS_PORT_HIGH=6379
+REDIS_HOST_LOW=redis_low
+REDIS_PORT_LOW=6379
+
+RATE_LIMIT_PER_HOUR=1000
+USER_RATE_LIMIT_PER_HOUR=500
+MAX_FAILED_ATTEMPTS=10
+LOCKOUT_DURATION_SECONDS=900
+HEARTBEAT_INTERVAL_SECONDS=30
+```
+
+Note: Use the service names (`postgres`, `redis_low`, `redis_high`) when running inside Docker so services can discover each other on the Compose network.
 
 ## Getting Started
 
