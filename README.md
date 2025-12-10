@@ -24,34 +24,30 @@ TaskFlow is a distributed task queue system designed to manage, schedule, and ex
 - **Soft and Hard Delete for API Keys**: Inactive keys are first deactivated, then permanently deleted after a retention period.
 - **Database Migrations**: Managed with Alembic.
 
-## Directory Structure
+## Directory structure
 
+Below is the actual repository layout (trimmed to key files and folders):
 
 ```
-TaskFlow/
-├── alembic.ini
+.
+├── .dockerignore
 ├── docker-compose.yml
-├── notes.md
 ├── README.md
 ├── requirements.txt
+├── alembic.ini
 ├── alembic/
+│   ├── env.py
+│   └── versions/
 ├── api/
-│   ├── __init__.py
-│   ├── dockerfile
+│   ├── Dockerfile
 │   ├── main.py
 │   ├── oauth2.py
 │   ├── rate_limiter.py
+│   ├── routers/
 │   ├── schemas.py
-│   ├── utils.py
-│   └── routers/
-│       ├── __init__.py
-│       ├── api_keys.py
-│       ├── auth.py
-│       ├── status.py
-│       ├── tasks.py
-│       └── user.py
+│   └── utils.py
 ├── core/
-│   ├── __init__.py
+│   ├── Dockerfile
 │   ├── config.py
 │   ├── database.py
 │   ├── models.py
@@ -59,15 +55,21 @@ TaskFlow/
 │   └── redis_client.py
 ├── scripts/
 │   ├── __init__.py
-│   └── janitor.py
+│   └── janitor_script.py
 ├── worker/
-│   ├── __init__.py
-│   ├── dockerfile
-│   └── worker.py
-├── worker_cpp/
-│   ├── dockerfile
-│   └── worker.cpp
+│   ├── Dockerfile
+│   ├── README.md
+│   ├── heartbeat.py
+│   ├── main.py
+│   ├── task_handler.py
+│   └── tasks.py
+
 ```
+
+Notes:
+- The `Dockerfile` files under `api/`, `core/`, and `worker/` are per-service Dockerfiles used for local development images.
+- `alembic/versions/` contains DB migration scripts.
+- `TaskFlow/` is a folder with API examples / Postman collections and test scenarios.
 
 ## Maintenance
 
