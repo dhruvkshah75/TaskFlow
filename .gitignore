@@ -1,6 +1,8 @@
 venv/
 markdown/
 .env
+.env.docker
+.env.production
 __pycache__
 .vscode/
 TaskFlow/
@@ -9,4 +11,8 @@ logs/
 README_UPDATED.md
 core/queue_manager.md
 PRODUCTION_ROADMAP.md
-.env.docker
+QUICK_START.md
+README_PRODUCTION.md
+DEPLOY_CHECKLIST.md
+PRODUCTION_DEPLOYMENT.md
+ENV_FILES_GUIDE.md
