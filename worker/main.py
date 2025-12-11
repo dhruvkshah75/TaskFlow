@@ -1,8 +1,10 @@
-import logging, uuid, json, signal, asyncio
+import logging, uuid, json, signal, asyncio, os
 from core.redis_client import get_async_redis_client
 from .heartbeat import HeartbeatService
 from .task_handler import TaskHandler
 
+# Ensure logs directory exists
+os.makedirs("logs", exist_ok=True)
 
 logging.basicConfig(
     level=logging.INFO, 

@@ -15,6 +15,9 @@ PROCESSING_QUEUE_PREFIX = "processing"
 PROCESSING_RECLAIM_S = 30  # Age (s) after which a processing item is considered stale
 
 # Logger configuration
+import os
+os.makedirs("logs", exist_ok=True)
+
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - [QueueManager] - %(levelname)s - %(message)s',

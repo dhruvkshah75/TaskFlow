@@ -1,5 +1,8 @@
-import asyncio, logging
+import asyncio, logging, os
 from core.redis_client import get_async_redis_client
+
+# Ensure logs directory exists
+os.makedirs("logs", exist_ok=True)
 
 logging.basicConfig(
     level=logging.INFO, 

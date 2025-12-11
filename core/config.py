@@ -16,7 +16,8 @@ class Settings(BaseSettings):
     REDIS_PORT_HIGH: int
     REDIS_HOST_HIGH: str
     REDIS_PORT_LOW: int
-    REDIS_HOST_LOW: str 
+    REDIS_HOST_LOW: str
+    REDIS_PASSWORD: str | None = None  # Optional Redis password
 
     # some rate limiting constants 
     RATE_LIMIT_PER_HOUR: int

@@ -8,3 +8,4 @@ logs/
 .env.*
 *.md
 markdown/
+.env.production

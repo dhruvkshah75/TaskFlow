@@ -1,11 +1,14 @@
 
-import asyncio, logging, json
+import asyncio, logging, json, os
 from datetime import datetime, timezone, timedelta
 import sqlalchemy as sa
 from core.database import SessionLocal 
 from core.models import Tasks, TaskStatus, TaskEvents, EventType
 from .tasks import HANDLERS
 from core.queue_manager import push_task
+
+# Ensure logs directory exists
+os.makedirs("logs", exist_ok=True)
 
 logging.basicConfig(
     level=logging.INFO, 

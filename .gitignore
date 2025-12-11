@@ -6,6 +6,7 @@ markdown/
 __pycache__
 .vscode/
 TaskFlow/
+taskFlow-prod/
 venv/
 logs/
 README_UPDATED.md
@@ -15,4 +16,3 @@ QUICK_START.md
 README_PRODUCTION.md
 DEPLOY_CHECKLIST.md
 PRODUCTION_DEPLOYMENT.md
-ENV_FILES_GUIDE.md

@@ -6,14 +6,16 @@ import redis.asyncio as aioredis
 # This instance should be kept clean of bulk jobs to ensure low latency for users.
 redis_high = redis.Redis(
     host=settings.REDIS_HOST_HIGH, port=settings.REDIS_PORT_HIGH, 
-    db=0, decode_responses=True
+    db=0, decode_responses=True,
+    password=getattr(settings, 'REDIS_PASSWORD', None)
 )
 
 # Used for: Bulk tasks, Reports, Image Processing, etc.
 # It is okay if this instance gets backed up with thousands of items.
 redis_low = redis.Redis(
     host=settings.REDIS_HOST_LOW, port=settings.REDIS_PORT_LOW, 
-    db=0, decode_responses=True
+    db=0, decode_responses=True,
+    password=getattr(settings, 'REDIS_PASSWORD', None)
 )
 
 
@@ -50,8 +52,12 @@ async def get_async_redis_client(priority: str = "low") -> aioredis.Redis:
         host = settings.REDIS_HOST_LOW
         port = settings.REDIS_PORT_LOW
 
-    # Create the URL connection string
-    url = f"redis://{host}:{port}/0"
+    # Create the URL connection string with optional password
+    password = getattr(settings, 'REDIS_PASSWORD', None)
+    if password:
+        url = f"redis://:{password}@{host}:{port}/0"
+    else:
+        url = f"redis://{host}:{port}/0"
     
     # Return the async client
     return aioredis.from_url(url, decode_responses=True)

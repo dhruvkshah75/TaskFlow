@@ -6,8 +6,8 @@ services:
     image: ghcr.io/dhruvkshah75/taskflow-api:latest
     container_name: taskflow_api
     working_dir: /app
-    # Production: no --reload, run migrations separately
-    command: sh -c "uvicorn api.main:app --host 0.0.0.0 --port 8000 --workers 4"
+    # Production: run migrations first, then start server
+    command: sh -c "alembic upgrade head && uvicorn api.main:app --host 0.0.0.0 --port 8000 --workers 4"
     env_file: .env.production
     ports:
       - "8000:8000"
