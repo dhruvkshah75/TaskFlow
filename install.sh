@@ -16,25 +16,25 @@ echo ""
 echo "Checking prerequisites..."
 
 if ! command -v docker &> /dev/null; then
-    echo "❌ Docker is not installed. Please install Docker first:"
+    echo "Docker is not installed. Please install Docker first:"
     echo "   https://docs.docker.com/get-docker/"
     exit 1
 fi
 
 if ! command -v docker-compose &> /dev/null && ! docker compose version &> /dev/null; then
-    echo "❌ Docker Compose is not installed. Please install Docker Compose first:"
+    echo "Docker Compose is not installed. Please install Docker Compose first:"
     echo "   https://docs.docker.com/compose/install/"
     exit 1
 fi
 
-echo "✅ Docker installed: $(docker --version)"
-echo "✅ Docker Compose installed"
+echo "Docker installed: $(docker --version)"
+echo "Docker Compose installed"
 echo ""
 
 # Create installation directory
 INSTALL_DIR="taskflow"
 if [ -d "$INSTALL_DIR" ]; then
-    echo "⚠️  Directory '$INSTALL_DIR' already exists!"
+    echo "Directory '$INSTALL_DIR' already exists!"
     read -p "Remove and reinstall? (y/N): " -n 1 -r
     echo ""
     if [[ $REPLY =~ ^[Yy]$ ]]; then
@@ -47,21 +47,21 @@ fi
 
 mkdir -p "$INSTALL_DIR"
 cd "$INSTALL_DIR"
-echo "✅ Created installation directory: $INSTALL_DIR"
+echo "Created installation directory: $INSTALL_DIR"
 echo ""
 
 # Download required files
 echo "Downloading configuration files..."
 
 curl -sSL "$RAW_URL/docker-compose.prod.yml" -o docker-compose.prod.yml
-echo "✅ Downloaded docker-compose.prod.yml"
+echo "Downloaded docker-compose.prod.yml"
 
 curl -sSL "$RAW_URL/.env.production.example" -o .env.production.example
-echo "✅ Downloaded .env.production.example"
+echo "Downloaded .env.production.example"
 
 curl -sSL "$RAW_URL/scripts/setup-production.sh" -o setup-production.sh
 chmod +x setup-production.sh
-echo "✅ Downloaded setup-production.sh"
+echo "Downloaded setup-production.sh"
 
 echo ""
 
@@ -97,27 +97,27 @@ sleep 10
 if docker-compose -f docker-compose.prod.yml ps | grep -q "Up"; then
     echo ""
     echo "=================================================="
-    echo "✅ TaskFlow successfully installed and running!"
+    echo "TaskFlow successfully installed and running!"
     echo "=================================================="
     echo ""
-    echo "📍 Installation directory: $(pwd)"
-    echo "🌐 API endpoint: http://localhost:8000"
-    echo "📚 API documentation: http://localhost:8000/docs"
+    echo "Installation directory: $(pwd)"
+    echo "API endpoint: http://localhost:8000"
+    echo "API documentation: http://localhost:8000/docs"
     echo ""
-    echo "🔍 Check status:"
+    echo "Check status:"
     echo "   docker-compose -f docker-compose.prod.yml ps"
     echo ""
-    echo "📋 View logs:"
+    echo "View logs:"
     echo "   docker-compose -f docker-compose.prod.yml logs -f"
     echo ""
-    echo "🧪 Test the API:"
+    echo "Test the API:"
     echo "   curl http://localhost:8000/status"
     echo ""
-    echo "📖 Full documentation: QUICK_START.md"
-    echo "🔗 GitHub: $REPO_URL"
+    echo "Full documentation: QUICK_START.md"
+    echo "GitHub: $REPO_URL"
     echo ""
 else
     echo ""
-    echo "⚠️  Services started but may not be healthy yet."
+    echo "Services started but may not be healthy yet."
     echo "Check logs with: docker-compose -f docker-compose.prod.yml logs"
 fi
