@@ -1,4 +1,17 @@
 services:
+  nginx:
+    image: nginx:latest
+    container_name: taskflow_nginx
+    ports:
+      - "80:80"  # Expose standard web port
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - api
+    networks:
+      - taskflow_net
+    restart: always
+
   api:
     build:
       context: .
@@ -7,10 +20,10 @@ services:
     container_name: taskflow_api
     working_dir: /app
     # Production: run migrations first, then start server
-    command: sh -c "alembic upgrade head && uvicorn api.main:app --host 0.0.0.0 --port 8000 --workers 4"
+    command: sh -c "alembic upgrade head && python -m scripts.janitor_script && uvicorn api.main:app --host 0.0.0.0 --port 8000 --workers 4"
     env_file: .env.production
-    ports:
-      - "8000:8000"
+    expose:
+      - "8000"  # Only internal containers (Nginx) can see this removed: ports: - "8000:8000"(So users can't bypass Nginx)
     depends_on:
       pgbouncer:
         condition: service_healthy
