@@ -12,7 +12,7 @@ services:
     ports:
       - "8000:8000"
     depends_on:
-      postgres:
+      pgbouncer:
         condition: service_healthy
       redis_low:
         condition: service_healthy
@@ -40,7 +40,7 @@ services:
     working_dir: /app
     env_file: .env.production
     depends_on:
-      postgres:
+      pgbouncer:
         condition: service_healthy
       redis_low:
         condition: service_healthy
@@ -63,7 +63,7 @@ services:
     depends_on:
       api:
         condition: service_healthy
-      postgres:
+      pgbouncer:
         condition: service_healthy
       redis_low:
         condition: service_healthy
@@ -91,6 +91,31 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    networks:
+      - taskflow_net
+    restart: always
+
+  pgbouncer:
+    image: edoburu/pgbouncer:latest
+    container_name: taskflow_pgbouncer
+    environment:
+      - DB_USER=${POSTGRES_USER}
+      - DB_PASSWORD=${POSTGRES_PASSWORD}
+      - DB_HOST=postgres         
+      - DB_PORT=5432             
+      - POOL_MODE=transaction    
+      - MAX_CLIENT_CONN=1000     
+      - DEFAULT_POOL_SIZE=20    
+      - AUTH_TYPE=scram-sha-256  
+      - LISTEN_PORT=6432
+    healthcheck:
+      test: ["CMD", "nc", "-z", "127.0.0.1", "6432"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    depends_on:
+      postgres:
+        condition: service_healthy
     networks:
       - taskflow_net
     restart: always
