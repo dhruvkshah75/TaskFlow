@@ -6,7 +6,10 @@ from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sess
 
 SQLALCHEMY_DATABASE_URL = str(settings.DATABASE_URL)
 
-engine = create_engine(SQLALCHEMY_DATABASE_URL)
+engine = create_engine(
+    SQLALCHEMY_DATABASE_URL,
+    pool_pre_ping=True  # Checks connection health before query
+)
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
@@ -22,8 +25,15 @@ def get_db():
 
 ASYNC_DATABASE_URL = SQLALCHEMY_DATABASE_URL.replace("postgresql://", "postgresql+asyncpg://")
 
-# 3. Create the Async Engine connecting to the same database
-async_engine = create_async_engine(ASYNC_DATABASE_URL, echo=False)
+# Create the Async Engine connecting to the same database
+async_engine = create_async_engine(
+    ASYNC_DATABASE_URL, 
+    echo=False,
+    pool_pre_ping=True,  #Checks connection health before query
+    connect_args={
+        "prepare_threshold": None # disable prepared statements(Required for PgBouncer)
+    }
+)
 
 # Create the async session factory
 AsyncSessionLocal = async_sessionmaker(

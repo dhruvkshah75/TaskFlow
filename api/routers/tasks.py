@@ -72,7 +72,7 @@ def create_task(task: schemas.TaskCreate, db: Session=Depends(get_db),
 
 @router.get("/", response_model=List[schemas.TaskResponse], 
             dependencies = [Depends(user_rate_limiter)])
-def get_all_tasks(db: Session=Depends(get_db),
+def get_all_tasks_by_user(db: Session=Depends(get_db),
                   current_user: dict = Depends(get_current_user), 
                   limit: int=10, skip: int=0, search: Optional[str] = "",
                   status: Optional[models.TaskStatus] = None):
