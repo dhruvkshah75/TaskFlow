@@ -1,0 +1,102 @@
+
+# ====== Storage ======
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: postgres-pvc 
+  namespace: taskflow
+spec:
+  accessModes:
+   - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi  # Request 1GB of disk space
+
+
+---
+
+# ===== Postgres Service -- only the pgbouncer talks to this service =====
+apiVersion: v1
+kind: Service 
+metadata:
+  name: postgres-internal  # this is the hostname "connect to the postgres-internal"
+  namespace: taskflow 
+spec:
+  ports: 
+    - port: 5432
+      targetPort: 5432
+  selector:
+    app: postgres # send traffic to pods labbelled as "app: postgres"
+  type: ClusterIP
+
+---
+
+# Postgres Database => The Database container 
+apiVersion: apps/v1
+kind: StatefulSet
+metadata: 
+  name: postgres
+  namespace: taskflow
+spec:
+  serviceName: "postgres-internal"
+  replicas: 1
+  selector:
+    matchLabels:
+      app: postgres
+  template:  # defines the template of the container 
+    metadata:
+      labels: 
+        app: postgres
+    spec:
+      containers:
+        - name: postgres
+          image: postgres:15
+          ports:
+            - containerPort: 5432
+          env:
+            - name: POSTGRES_DB
+              valueFrom:
+                secretKeyRef:
+                  name: taskflow-db-secret
+                  key: POSTGRES_DB
+            - name: POSTGRES_USER
+              valueFrom:
+                secretKeyRef:
+                  name: taskflow-db-secret
+                  key: POSTGRES_USER
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: taskflow-db-secret
+                  key: POSTGRES_PASSWORD
+          volumeMounts:
+            - name: postgres-storage
+              mountPath: /var/lib/postgresql/data
+    volumes:
+      - name: postgres-storage
+        persistentVolumeClaim:
+          claimName: postgres-pvc
+
+
+---
+
+# =========== pgBouncer (The Middleman) ===========
+
+# PgBouncer Service (Public Entrypoint)
+apiVersion: v1
+kind: Service
+metadata:
+  name: taskflow-pgbouncer 
+  namespace: taskflow
+spec:
+  ports:
+    - port: 6432
+      targetPort: 6432
+  selector:
+    app: pgbouncer
+  type: ClusterIP
+
+---
+
+
+

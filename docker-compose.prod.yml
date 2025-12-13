@@ -110,7 +110,7 @@ services:
 
   pgbouncer:
     image: edoburu/pgbouncer:latest
-    container_name: taskflow_pgbouncer
+    container_name: taskflow-pgbouncer
     environment:
       - DB_USER=${POSTGRES_USER}
       - DB_PASSWORD=${POSTGRES_PASSWORD}
