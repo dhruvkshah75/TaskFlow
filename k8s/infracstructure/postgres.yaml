@@ -51,6 +51,14 @@ spec:
       containers:
         - name: postgres
           image: postgres:15
+          # resources the container is allowed to use 
+          resources:
+            requests:
+              memory: "256Mi"   # DBs need more RAM to start
+              cpu: "250m"       # 25% of a core
+            limits:
+              memory: "512Mi"   # Cap at 512MB to prevent crashes
+              cpu: "500m"       # Cap at 50% of a core
           ports:
             - containerPort: 5432
           env:
@@ -98,5 +106,59 @@ spec:
 
 ---
 
-
+# PgBouncer Deployment 
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pgbouncer
+  namespace: taskflow
+spec:
+  replica: 1
+  selector:
+    matchLabels:
+      app: pgbouncer
+  template:
+    metadata:
+      labels:
+        app: pgbouncer
+    spec: 
+      containers: 
+        - name: pgbouncer
+          image: edoburu/pgbouncer:latest
+          resources:
+            requests:
+              memory: "64Mi"  # Minimum memory required
+              cpu: "100m"     # Minimum CPU (10% of a core)
+            limits:
+              memory: "128Mi" # Maximum memory allowed
+              cpu: "250m"     # Maximum CPU (25% of a core)
+          ports:
+            - containerPort: 6432
+          env:
+            # connects the internal postgres service to the service defined above 
+            - name: DB_HOST
+              value: "postgres-internal"
+            - name: DB_PORT
+              value: "5432"
+            - name: LISTEN_PORT
+              value: "6432"
+            - name: DB_USER
+              valueFrom:
+                secretKeyRef:
+                  name: taskflow-db-secret
+                  key: POSTGRES_USER
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: taskflow-db-secret
+                  key: POSTGRES_PASSWORD
+            # Connection Pooling Settings
+            - name: AUTH_TYPE
+              value: "scram-sha-256"  # defualt for the pgbouncer 
+            - name: POOL_MODE
+              value: "transaction"
+            - name: MAX_CLIENT_CONN
+              value: "1000"
+            - name: DEFAULT_POOL_SIZE
+              value: "20"
 
