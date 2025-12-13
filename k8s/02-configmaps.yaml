@@ -71,12 +71,18 @@ metadata:
   name: taskflow-autoscaling-config
   namespace: taskflow
 data:
-  # HPA Configuration
+  # Worker HPA Configuration
   MIN_WORKERS: "2"
   MAX_WORKERS: "20"
-  TARGET_CPU_UTILIZATION: "70"
-  TARGET_MEMORY_UTILIZATION: "80"
-  # Queue-based scaling thresholds (for KEDA)
+  WORKER_TARGET_CPU_UTILIZATION: "70"
+  WORKER_TARGET_MEMORY_UTILIZATION: "80"
+  # API HPA Configuration
+  MIN_API_REPLICAS: "2"
+  MAX_API_REPLICAS: "10"
+  API_TARGET_CPU_UTILIZATION: "70"
+  API_TARGET_MEMORY_UTILIZATION: "80"
+  API_TARGET_REQUESTS_PER_SECOND: "100"
+  # Queue-based scaling thresholds (for KEDA - Workers only)
   QUEUE_LENGTH_THRESHOLD: "10"
   SCALE_UP_MESSAGES: "50"
   SCALE_DOWN_MESSAGES: "5"
