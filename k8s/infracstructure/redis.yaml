@@ -1,0 +1,107 @@
+# ==== Redis high service ====
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis-high
+  namespace: taskflow
+spec:
+  ports: 
+    - port: 6379
+      targetPort: 6379
+  selector:
+    app: redis-high
+  type: ClusterIP
+
+---
+
+# ==== Reids high Deployment =====
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: redis-high
+  namespace: taskflow
+spec:
+  replicas: 1
+  selector:
+    matchLabels: 
+      app: redis-high
+  template:
+    metadata:
+      labels:
+        app: redis-high
+    spec:
+      containers:
+        - name: redis
+          image: redis:7 
+          command: ["redis-server", "--requirepass", "$(REDIS_PASSWORD)"]
+          ports: 
+            - containerPort: 6379
+          env:
+            - name: REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: taskflow-redis-secret
+                  key: REDIS_PASSWORD
+          resources:    # Resource limits to prevent "Noisy Neighbor" issues
+            requests:
+              memory: "64Mi"
+              cpu: "100m"
+            limits:
+              memory: "128Mi"
+              cpu: "500m"
+
+---
+
+# ====== Redis Low Service ===== 
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis-low      
+  namespace: taskflow
+spec:
+  ports:
+    - port: 6379
+      targetPort: 6379
+  selector:
+    app: redis-low
+  type: ClusterIP
+
+---
+
+# 4. Redis Low Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: redis-low
+  namespace: taskflow
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: redis-low
+  template:
+    metadata:
+      labels:
+        app: redis-low
+    spec:
+      containers:
+        - name: redis
+          image: redis:7-alpine
+          command: ["redis-server", "--requirepass", "$(REDIS_PASSWORD)"]
+          ports:
+            - containerPort: 6379
+          env:
+            - name: REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: taskflow-redis-secret
+                  key: REDIS_PASSWORD
+          resources:
+            requests:
+              memory: "64Mi"
+              cpu: "100m"
+            limits:
+              memory: "128Mi"
+              cpu: "500m"
+
