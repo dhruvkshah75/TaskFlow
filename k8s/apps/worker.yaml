@@ -1,0 +1,48 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: worker
+  namespace: taskflow
+spec:
+  # You had 4 replicas in Docker Compose.
+  # In K8s, we start with 2 for high availability, but you can scale this 
+  # to 10+ easily using 'kubectl scale' or Autoscaling (HPA) later.
+  replicas: 2
+  selector:
+    matchLabels:
+      app: worker
+  template:
+    metadata:
+      labels:
+        app: worker
+    spec:
+      containers:
+        - name: worker
+          image: ghcr.io/dhruvkshah75/taskflow-worker:latest
+          # so we do not need to override it here unless you want to change flags.
+          # Load ALL Configs and Secrets
+          # The worker needs access to EVERYTHING:
+          envFrom:
+            - configMapRef:
+                name: taskflow-app-config
+            - configMapRef:
+                name: taskflow-db-config
+            - configMapRef:
+                name: taskflow-redis-config
+            - secretRef:
+                name: taskflow-db-secret
+            - secretRef:
+                name: taskflow-redis-secret
+            - secretRef:
+                name: taskflow-app-secret
+          # Resource Limits (CRITICAL FOR WORKERS)
+          # Workers do the heavy lifting (image processing, data crunching). We give them higher limits than the Queue Manager.
+          # If a worker tries to eat too much RAM, K8s will kill and restart it 
+          # to protect the rest of the node.
+          resources:
+            requests:
+              memory: "128Mi"
+              cpu: "100m"
+            limits:
+              memory: "1Gi"   # Allow up to 1GB per worker
+              cpu: "1000m"    # Allow up to 1 full CPU core

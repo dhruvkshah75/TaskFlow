@@ -1,0 +1,43 @@
+# ========= Queue Manager Service =================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: queue-manager
+  namespace: taskflow
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: queue-manager
+  template:
+    metadata:
+      labels:
+        app: queue-manager
+    spec:
+      containers:
+      - name: queue-manager
+        image: ghcr.io/dhruvkshah75/taskflow-queue-manager:latest
+          # Load ALL Configs and Secrets (It needs Redis to route tasks and DB to check status)
+        envFrom:
+          - configMapRef:
+              name: taskflow-app-config
+          - configMapRef:
+              name: taskflow-db-config
+          - configMapRef:
+              name: taskflow-redis-config
+          - secretRef:
+              name: taskflow-db-secret
+          - secretRef:
+              name: taskflow-redis-secret
+          - secretRef:
+              name: taskflow-app-secret
+        # Resource Limits
+        # Queue managers are usually lightweight (mostly logic, no heavy lifting)
+        resources:
+          requests:
+            memory: "64Mi"
+            cpu: "50m"
+          limits:
+            memory: "256Mi"
+            cpu: "250m"
+

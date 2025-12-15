@@ -27,9 +27,9 @@ services:
     depends_on:
       pgbouncer:
         condition: service_healthy
-      redis_low:
+      redis-low:
         condition: service_healthy
-      redis_high:
+      redis-high:
         condition: service_started
     restart: always
     healthcheck:
@@ -55,7 +55,7 @@ services:
     depends_on:
       pgbouncer:
         condition: service_healthy
-      redis_low:
+      redis-low:
         condition: service_healthy
     restart: always
     networks:
@@ -78,9 +78,9 @@ services:
         condition: service_healthy
       pgbouncer:
         condition: service_healthy
-      redis_low:
+      redis-low:
         condition: service_healthy
-      redis_high:
+      redis-high:
         condition: service_started
     restart: always
     networks:
@@ -133,9 +133,9 @@ services:
       - taskflow_net
     restart: always
 
-  redis_low:
+  redis-low:
     image: redis:7
-    container_name: taskflow_redis_low
+    container_name: taskflow-redis-low
     # Production: Enable password authentication
     command: ["redis-server", "--save", "60", "1", "--requirepass", "${REDIS_PASSWORD:-changeme}"]
     volumes:
@@ -149,9 +149,9 @@ services:
       - taskflow_net
     restart: always
 
-  redis_high:
+  redis-high:
     image: redis:7
-    container_name: taskflow_redis_high
+    container_name: taskflow-redis-high
     command: ["redis-server", "--save", "60", "1", "--requirepass", "${REDIS_PASSWORD:-changeme}"]
     volumes:
       - redisdata_high:/data

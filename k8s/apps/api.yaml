@@ -1,0 +1,94 @@
+# =========== api service ======
+apiVersion: v1 
+kind: Service
+metadata:
+  name: taskflow-api  # other pods like the nginx will talk to this name
+  namespace: taskflow
+spec:
+  selector:
+    app: api
+  ports:
+  - port: 8000
+    targetPort: 8000
+  type: ClusterIP
+
+---
+
+# ========== API deployment ========
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api 
+  namespace: taskflow
+spec:
+  # STATIC SCALING: Since we don't have autoscaling yet, we set this manually.
+  # 2 replicas ensures if one crashes/updates, the other keeps serving
+  replicas: 2 
+  selector:
+    matchLabels:
+      app: api 
+  template:
+    metadata:
+      labels:
+        app: api 
+    spec:
+      # --- INIT CONTAINER: RUN MIGRATIONS ---
+      # This runs once before the main container starts.
+      # It replaces the "command: sh -c ..." logic from Docker Compose.
+      initContainers:
+        - name: run-migration
+          image: ghcr.io/dhruvkshah75/taskflow-api:latest
+          command: ["alembic", "upgrade", "head"]
+          envFrom:
+            - configMapRef:
+                name: taskflow-app-config
+            - configMapRef:
+                name: taskflow-db-config
+            - secretRef:
+                name: taskflow-db-secret
+      # MAIN container of the api
+      containers:
+      - name: api 
+        image: ghcr.io/dhruvkshah75/taskflow-api:latest
+        command: ["uvicorn", "api.main:app", "--host", "0.0.0.0", "--port", "8000"]
+        ports:
+        - containerPort: 8000
+        envFrom:  # loading all the configurations for the api container
+            - configMapRef:
+                name: taskflow-app-config
+            - configMapRef:
+                name: taskflow-db-config
+            - configMapRef:
+                name: taskflow-redis-config
+            - secretRef:
+                name: taskflow-db-secret
+            - secretRef:
+                name: taskflow-redis-secret
+            - secretRef:
+                name: taskflow-app-secret
+        # HEALTH CHECKS (K8s equivalent of Docker healthcheck)
+        # Liveness: "Are you frozen/dead?" -> If failed, restart pod.
+        livenessProbe:
+          httpGet:
+            path: /status
+            port: 8000
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        
+        # Readiness: "Are you ready for traffic?" -> If failed, don't send users here yet.
+        readinessProbe:
+          httpGet:
+            path: /status
+            port: 8000
+          initialDelaySeconds: 5
+          periodSeconds: 5
+
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+
+
