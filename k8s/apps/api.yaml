@@ -46,6 +46,11 @@ spec:
                 name: taskflow-db-config
             - secretRef:
                 name: taskflow-db-secret
+            - configMapRef:
+                name: taskflow-redis-config
+          env:
+            - name: DATABASE_URL
+              value: "postgresql://$(POSTGRES_USER):$(POSTGRES_PASSWORD)@$(POSTGRES_HOST):$(POSTGRES_PORT)/$(POSTGRES_DB)"
       # MAIN container of the api
       containers:
       - name: api 

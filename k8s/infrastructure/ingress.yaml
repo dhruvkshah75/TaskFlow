@@ -1,0 +1,27 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: taskflow-ingress
+  namespace: taskflow
+  annotations:
+    # Use the Nginx Ingress Controller(Standard for Minikube/Cloud)
+    nginx.ingress.kubernetes.io/rewrite-target: /
+    # Allow larger payloads (e.g. 10MB) if you plan to upload files later
+    nginx.ingress.kubernetes.io/proxy-body-size: "10m"
+    # Increase timeouts for long-running API requests (optional but good for safety)
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "120"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "120"
+
+spec:
+  # This tells K8s to use the Nginx controller we enabled with 'minikube addons enable ingress'
+  ingressClassName: nginx
+  rules:
+    - http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: taskflow-api   # Must match the Service name in k8s/apps/api.yaml
+                port:
+                  number: 8000       # Must match the Service port (not necessarily container port)
