@@ -1,72 +1,48 @@
-
-# ====== Storage ======
+# ==========================================================
+# PART 1: INTERNAL POSTGRES SERVICE (Headless)
+# ==========================================================
 apiVersion: v1
-kind: PersistentVolumeClaim
+kind: Service
 metadata:
-  name: postgres-pvc 
+  # This name "postgres-internal" is used internally by PgBouncer to find the DB.
+  name: postgres-internal
   namespace: taskflow
 spec:
-  accessModes:
-   - ReadWriteOnce
-  resources:
-    requests:
-      storage: 1Gi  # Request 1GB of disk space
-
-
----
-
-# ===== Postgres Service -- only the pgbouncer talks to this service =====
-apiVersion: v1
-kind: Service 
-metadata:
-  name: postgres-internal  # this is the hostname "connect to the postgres-internal"
-  namespace: taskflow 
-spec:
-  ports: 
+  ports:
     - port: 5432
       targetPort: 5432
   selector:
-    app: postgres # send traffic to pods labbelled as "app: postgres"
-  type: ClusterIP
+    app: postgres
+  clusterIP: None 
 
 ---
 
-# Postgres Database => The Database container 
+# ==========================================================
+# PART 2: POSTGRES DEPLOYMENT (The Actual Database)
+# ==========================================================
 apiVersion: apps/v1
-kind: StatefulSet
-metadata: 
+kind: Deployment
+metadata:
   name: postgres
   namespace: taskflow
 spec:
-  serviceName: "postgres-internal"
+  # Databases are stateful. We usually run only 1 replica to avoid data clash 
   replicas: 1
   selector:
     matchLabels:
       app: postgres
-  template:  # defines the template of the container 
+  template:
     metadata:
-      labels: 
+      labels:
         app: postgres
     spec:
       containers:
         - name: postgres
-          image: postgres:15
-          # resources the container is allowed to use 
-          resources:
-            requests:
-              memory: "256Mi"   # DBs need more RAM to start
-              cpu: "250m"       # 25% of a core
-            limits:
-              memory: "512Mi"   # Cap at 512MB to prevent crashes
-              cpu: "500m"       # Cap at 50% of a core
+          image: postgres:15-alpine
           ports:
             - containerPort: 5432
+          # Loading secrets securely from 'k8s/01-secrets.yaml'
           env:
-            - name: POSTGRES_DB
-              valueFrom:
-                secretKeyRef:
-                  name: taskflow-db-secret
-                  key: POSTGRES_DB
             - name: POSTGRES_USER
               valueFrom:
                 secretKeyRef:
@@ -77,36 +53,77 @@ spec:
                 secretKeyRef:
                   name: taskflow-db-secret
                   key: POSTGRES_PASSWORD
+            - name: POSTGRES_DB
+              value: "taskflow_db"
+            # This tells Postgres to store data in the mounted volume path
+            - name: PGDATA
+              value: "/var/lib/postgresql/data/pgdata"
+          
+          # MOUNTS: Connect the "virtual hard drive" (PVC) to the container
           volumeMounts:
             - name: postgres-storage
               mountPath: /var/lib/postgresql/data
-    volumes:
-      - name: postgres-storage
-        persistentVolumeClaim:
-          claimName: postgres-pvc
-
+          
+          # RESOURCES: Prevents the DB from eating all server RAM
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "250m"
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
+      
+      # VOLUMES: Define the storage claim to use
+      volumes:
+        - name: postgres-storage
+          persistentVolumeClaim:
+            claimName: postgres-pvc
 
 ---
 
-# =========== pgBouncer (The Middleman) ===========
+# ==========================================================
+# PART 3: PERSISTENT STORAGE (The Hard Drive)
+# ==========================================================
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: postgres-pvc
+  namespace: taskflow
+spec:
+  # "ReadWriteOnce" means the volume can be mounted by only one node at a time.
+  # This is standard for block storage (like AWS EBS or a local disk).
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      # Allocates 1GB of physical storage for database files.
+      storage: 1Gi
 
-# PgBouncer Service (Public Entrypoint)
+---
+
+# ==========================================================
+# PART 4: PGBOUNCER SERVICE (The Connection Pooler)
+# ==========================================================
 apiVersion: v1
 kind: Service
 metadata:
-  name: taskflow-pgbouncer 
+  # This name "taskflow-pgbouncer" is what your API uses to connect.
+  # e.g., POSTGRES_HOST = "taskflow-pgbouncer"
+  name: taskflow-pgbouncer
   namespace: taskflow
 spec:
   ports:
-    - port: 6432
-      targetPort: 6432
+    - port: 6432        # The port the Service listens on
+      targetPort: 6432  # The port the Container listens on
   selector:
     app: pgbouncer
   type: ClusterIP
 
 ---
 
-# PgBouncer Deployment 
+# ==========================================================
+# PART 5: PGBOUNCER DEPLOYMENT
+# ==========================================================
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -121,27 +138,15 @@ spec:
     metadata:
       labels:
         app: pgbouncer
-    spec: 
-      containers: 
+    spec:
+      containers:
         - name: pgbouncer
           image: edoburu/pgbouncer:latest
-          resources:
-            requests:
-              memory: "64Mi"  # Minimum memory required
-              cpu: "100m"     # Minimum CPU (10% of a core)
-            limits:
-              memory: "128Mi" # Maximum memory allowed
-              cpu: "250m"     # Maximum CPU (25% of a core)
           ports:
             - containerPort: 6432
+          
+          # CONFIGURATION: Tells PgBouncer how to find the real Postgres
           env:
-            # connects the internal postgres service to the service defined above 
-            - name: DB_HOST
-              value: "postgres-internal"
-            - name: DB_PORT
-              value: "5432"
-            - name: LISTEN_PORT
-              value: "6432"
             - name: DB_USER
               valueFrom:
                 secretKeyRef:
@@ -152,13 +157,30 @@ spec:
                 secretKeyRef:
                   name: taskflow-db-secret
                   key: POSTGRES_PASSWORD
-            # Connection Pooling Settings
-            - name: AUTH_TYPE
-              value: "scram-sha-256"  # defualt for the pgbouncer 
+            
+            # Connects to the internal headless service defined in Part 1
+            - name: DB_HOST
+              value: "postgres-internal"
+            - name: DB_PORT
+              value: "5432"
+            
+            # POOLING SETTINGS:
+            # Transaction mode is best for modern web apps (FastAPI/Django).
             - name: POOL_MODE
               value: "transaction"
             - name: MAX_CLIENT_CONN
               value: "1000"
             - name: DEFAULT_POOL_SIZE
               value: "20"
-
+            - name: LISTEN_PORT
+              value: "6432"
+            - name: AUTH_TYPE
+              value: "scram-sha-256"
+          
+          resources:
+            requests:
+              memory: "64Mi"
+              cpu: "100m"
+            limits:
+              memory: "128Mi"
+              cpu: "250m"
