@@ -1,5 +1,4 @@
-# TaskFlow Kubernetes ConfigMaps Non-sensitive configuration data
-# These values can be changed without rebuilding Docker images
+# TaskFlow Kubernetes ConfigMaps 
 
 ---
 # Main Application Configuration
@@ -9,57 +8,51 @@ metadata:
   name: taskflow-app-config
   namespace: taskflow
 data:
-  # Environment
   ENVIRONMENT: "production"
-  # JWT Configuration (non-sensitive parts)
   ALGORITHM: "HS256"
   ACCESS_TOKEN_EXPIRE_MINUTES: "60"
-  # Rate Limiting Configuration
   RATE_LIMIT_PER_HOUR: "1000"
   USER_RATE_LIMIT_PER_HOUR: "500"
   MAX_FAILED_ATTEMPTS: "10"
   LOCKOUT_DURATION_SECONDS: "900"
-  # Worker Configuration
   HEARTBEAT_INTERVAL_SECONDS: "30"
   WORKER_CONCURRENCY: "4"
   TASK_TIMEOUT_SECONDS: "300"
   MAX_TASK_RETRIES: "3"
-  # Logging
   LOG_LEVEL: "INFO"
   LOG_FORMAT: "json"
 
 ---
-# Database Configuration (Non-sensitive) - Using PGBouncer
+# Database Configuration - Using PGBouncer
 apiVersion: v1
 kind: ConfigMap
 metadata:
   name: taskflow-db-config
   namespace: taskflow
 data:
-  # Primary Database Connection - Through PGBouncer
   POSTGRES_DB: "taskflow_db"
   POSTGRES_USER: "postgres"
-  POSTGRES_HOST: "taskflow-pgbouncer-service"
+  
+  POSTGRES_HOST: "taskflow-pgbouncer" 
   POSTGRES_PORT: "6432"
-  # Direct PostgreSQL Connection (for migrations/admin tasks only)
-  POSTGRES_DIRECT_HOST: "taskflow-postgres-service"
+  
+  POSTGRES_DIRECT_HOST: "postgres-internal"
   POSTGRES_DIRECT_PORT: "5432"
 
 ---
-# Redis Configuration (Non-sensitive)
+# Redis Configuration
 apiVersion: v1
 kind: ConfigMap
 metadata:
   name: taskflow-redis-config
   namespace: taskflow
 data:
-  # Redis High Priority Instance(for auth, rate limiting)
-  REDIS_HOST_HIGH: "redis_high"
+  REDIS_HOST_HIGH: "redis-high"
   REDIS_PORT_HIGH: "6379"
-  # Redis Low Priority Instance (for task queue)
-  REDIS_HOST_LOW: "redis_low"
+  
+  REDIS_HOST_LOW: "redis-low"
   REDIS_PORT_LOW: "6379"
-  # Actual Queue Names Used in Code
+  
   QUEUE_NAME: "default"
   PROCESSING_QUEUE_PREFIX: "processing"
 
@@ -71,18 +64,15 @@ metadata:
   name: taskflow-autoscaling-config
   namespace: taskflow
 data:
-  # Worker HPA Configuration
   MIN_WORKERS: "2"
   MAX_WORKERS: "20"
   WORKER_TARGET_CPU_UTILIZATION: "70"
   WORKER_TARGET_MEMORY_UTILIZATION: "80"
-  # API HPA Configuration
   MIN_API_REPLICAS: "2"
   MAX_API_REPLICAS: "10"
   API_TARGET_CPU_UTILIZATION: "70"
   API_TARGET_MEMORY_UTILIZATION: "80"
   API_TARGET_REQUESTS_PER_SECOND: "100"
-  # Queue-based scaling thresholds (for KEDA - Workers only)
   QUEUE_LENGTH_THRESHOLD: "10"
   SCALE_UP_MESSAGES: "50"
   SCALE_DOWN_MESSAGES: "5"
