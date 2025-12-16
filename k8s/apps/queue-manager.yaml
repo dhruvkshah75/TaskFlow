@@ -31,6 +31,13 @@ spec:
               name: taskflow-redis-secret
           - secretRef:
               name: taskflow-app-secret
+        env:
+          - name: REDIS_HOST_HIGH
+            value: "redis-high"
+          - name: REDIS_HOST_LOW
+            value: "redis-low"
+          - name: DATABASE_URL
+            value: "postgresql://$(POSTGRES_USER):$(POSTGRES_PASSWORD)@$(POSTGRES_HOST):$(POSTGRES_PORT)/$(POSTGRES_DB)"
         # Resource Limits
         # Queue managers are usually lightweight (mostly logic, no heavy lifting)
         resources:

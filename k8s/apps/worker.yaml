@@ -35,6 +35,14 @@ spec:
                 name: taskflow-redis-secret
             - secretRef:
                 name: taskflow-app-secret
+          # to fix the error as it is not connecting to the redis instances 
+          env:
+          - name: REDIS_HOST_HIGH
+            value: "redis-high"
+          - name: REDIS_HOST_LOW
+            value: "redis-low"
+          - name: DATABASE_URL
+            value: "postgresql://$(POSTGRES_USER):$(POSTGRES_PASSWORD)@$(POSTGRES_HOST):$(POSTGRES_PORT)/$(POSTGRES_DB)"
           # Resource Limits (CRITICAL FOR WORKERS)
           # Workers do the heavy lifting (image processing, data crunching). We give them higher limits than the Queue Manager.
           # If a worker tries to eat too much RAM, K8s will kill and restart it 
