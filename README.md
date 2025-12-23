@@ -21,7 +21,7 @@ The system leverages **FastAPI** for high-performance task submission and monito
 
 ---
 
-## 🚀 Quick Deployment (Docker)
+## Quick Deployment (Docker)
 
 Deploy TaskFlow in production using Docker Compose.
 
@@ -56,7 +56,7 @@ curl http://localhost:8000/status
 
 -----
 
-## ☸️ Kubernetes Deployment
+## Kubernetes Deployment
 
 Deploy TaskFlow to a local Minikube cluster or a production Kubernetes environment.
 
@@ -128,7 +128,7 @@ minikube tunnel
 
 -----
 
-## 🛠️ Development Setup
+## Development Setup
 
 If you want to develop or contribute to TaskFlow, follow these steps:
 
@@ -174,26 +174,26 @@ python -m worker.main
 - **Redis:** In-memory message broker.
 - **PostgreSQL:** Persistent storage for users and task history.
 
-## 📁 Repository Structure
+## Repository Structure
 
 ```
 TaskFlow/
-├── 📄 Deployment
+├── Deployment
 │   ├── docker-compose.prod.yml      # Docker Production
 │   ├── k8s/                        # Kubernetes Manifests
 │   │   ├── apps/                   # API, Worker, Queue Manager
 │   │   └── infrastructure/         # Redis, Postgres, Configs
 │
-├── 🌐 API Service
+├── API Service
 │   └── api/                        # FastAPI application
 │
-├── ⚙️ Core Services
+├── Core Services
 │   └── core/                       # Database, Config, Redis Client
 │
-├── 👷 Worker Service
+├── Worker Service
 │   └── worker/                     # Python Task Executors
 │
-└── 🗄️ Database
+└── Database
     └── alembic/                    # Migration scripts
 ```
 
