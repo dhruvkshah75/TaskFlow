@@ -1,5 +1,4 @@
-
-import asyncio, logging, json, os
+import asyncio, logging, json, os, math
 from datetime import datetime, timezone, timedelta
 import sqlalchemy as sa
 from core.database import SessionLocal 
@@ -20,6 +19,15 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+# --- STRESS TEST LOGIC ---
+def perform_heavy_computation():
+    """
+    Simulates heavy CPU load to trigger HPA scaling.
+    Calculates square roots 3 million times to spike CPU.
+    """
+    for i in range(3000000):
+        math.sqrt(i)
+# -------------------------
 
 class TaskHandler:
     def __init__(self, worker_id: str):
@@ -51,8 +59,16 @@ class TaskHandler:
             return
         
         logger.info(f"Using handler '{handler_key}' for task {task_id}")
+        
         # 3. Execute
         try:
+            # --- STRESS TEST TRIGGER ---
+            # We call this here to ensure every task creates CPU load
+            logger.info(f"Starting CPU Stress Test for Task {task_id}...")
+            perform_heavy_computation()
+            logger.info(f"Finished CPU Stress Test for Task {task_id}")
+            # ---------------------------
+
             if asyncio.iscoroutinefunction(handler):
                 result = await handler(payload)
             else:
