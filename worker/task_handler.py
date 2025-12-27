@@ -19,16 +19,6 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# --- STRESS TEST LOGIC ---
-def perform_heavy_computation():
-    """
-    Simulates heavy CPU load to trigger HPA scaling.
-    Calculates square roots 50 million times to spike CPU.
-    """
-    for i in range(50000000):
-        math.sqrt(i)
-# -------------------------
-
 class TaskHandler:
     def __init__(self, worker_id: str):
         self.worker_id = worker_id
@@ -62,12 +52,6 @@ class TaskHandler:
         
         # 3. Execute
         try:
-            # --- STRESS TEST TRIGGER ---
-            # We call this here to ensure every task creates CPU load
-            logger.info(f"Starting CPU Stress Test for Task {task_id}...")
-            perform_heavy_computation()
-            logger.info(f"Finished CPU Stress Test for Task {task_id}")
-            # ---------------------------
 
             if asyncio.iscoroutinefunction(handler):
                 result = await handler(payload)

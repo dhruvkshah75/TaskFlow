@@ -1,6 +1,7 @@
 import asyncio
 from dataclasses import dataclass
 from typing import Any, Dict
+import math
 
 @dataclass
 class TaskResult:
@@ -11,8 +12,12 @@ class TaskResult:
 
 # Example handlers
 async def dummy_handler(payload: Dict[str, Any]) -> TaskResult:
-    """An async dummy task that sleeps and returns success."""
-    await asyncio.sleep(1)
+    """
+    Simulates heavy CPU load to trigger HPA scaling.
+    Calculates square roots 50 million times to spike CPU.
+    """
+    for i in range(50000000):
+        math.sqrt(i)
     return TaskResult(success=True, message="dummy completed")
 
 
