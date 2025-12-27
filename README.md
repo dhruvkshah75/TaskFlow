@@ -27,13 +27,12 @@ The system leverages **FastAPI** for high-performance task submission and monito
     <td style="width: 50%; vertical-align: top;">
       <img src="./assets/illustration.png" 
            style="width: 100%; aspect-ratio: 16 / 9; object-fit: cover;" 
-           alt="TaskFlow Screenshot">
+           alt="TaskFlow Scaling Proof">
     </td>
     <td style="width: 50%; vertical-align: top;">
-      <video src="./assets/demo.mp4" 
-             style="width: 100%; aspect-ratio: 16 / 9;" 
-             controls>
-      </video>
+      <img src="./assets/demo.gif" 
+           style="width: 100%; aspect-ratio: 16 / 9; object-fit: cover;" 
+           alt="System Demo">
     </td>
   </tr>
 </table>
