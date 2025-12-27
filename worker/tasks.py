@@ -21,6 +21,16 @@ async def dummy_handler(payload: Dict[str, Any]) -> TaskResult:
     return TaskResult(success=True, message="dummy completed")
 
 
+async def heavy_task_handler(payload: Dict[str, Any]) -> TaskResult:
+    """
+    Heavy task handler for stress testing.
+    Simulates CPU-intensive work.
+    """
+    for i in range(50000000):
+        math.sqrt(i)
+    return TaskResult(success=True, message="heavy_task completed")
+
+
 def sync_echo_handler(payload: Dict[str, Any]) -> TaskResult:
     """A simple sync handler that echoes payload."""
     return TaskResult(success=True, message=f"echo: {payload}")
@@ -29,6 +39,7 @@ def sync_echo_handler(payload: Dict[str, Any]) -> TaskResult:
 # Registry: keys correspond to payload.type or task.title fallback
 HANDLERS = {
     "dummy": dummy_handler,
+    "heavy_task": heavy_task_handler,
     "echo": sync_echo_handler,
 }
 

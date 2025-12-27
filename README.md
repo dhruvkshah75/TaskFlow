@@ -21,6 +21,22 @@ The system leverages **FastAPI** for high-performance task submission and monito
 
 ---
 
+<table style="width: 100%;">
+  <tr>
+    <td style="width: 50%; vertical-align: top;">
+      <img src="./assets/illustration.png" 
+           style="width: 100%; aspect-ratio: 16 / 9; object-fit: cover;" 
+           alt="TaskFlow Screenshot">
+    </td>
+    <td style="width: 50%; vertical-align: top;">
+      <video src="./assets/demo1.mp4" 
+             style="width: 100%; aspect-ratio: 16 / 9;" 
+             controls>
+      </video>
+    </td>
+  </tr>
+</table>
+
 ## Quick Deployment (Docker)
 
 Deploy TaskFlow in production using Docker Compose.

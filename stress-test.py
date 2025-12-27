@@ -4,7 +4,7 @@ import sys
 import json
 from datetime import datetime, timezone
 
-# ⚙️ CONFIGURATION
+# CONFIGURATION
 API_URL = "http://127.0.0.1:8080"  # Or your Minikube IP
 # Use timestamp to create unique user for each run (avoids rate limit carryover)
 USERNAME = f"stress_tester_{int(time.time())}"
@@ -14,10 +14,10 @@ NUM_TASKS = 200
 BATCH_SIZE = 100  # Send in batches to avoid rate limiting
 
 def run_stress_test():
-    print(f"🚀 Connecting to {API_URL}...")
+    print(f"Connecting to {API_URL}...")
 
     # 1. CREATE USER (Ignore error if already exists)
-    print("👤 Creating user...")
+    print("Creating user...")
     requests.post(f"{API_URL}/users/", json={
         "username": USERNAME,
         "email": EMAIL,
@@ -25,7 +25,7 @@ def run_stress_test():
     })
 
     # 2. LOGIN (Get Token)
-    print("🔑 Logging in...")
+    print("Logging in...")
     # TaskFlow uses /login endpoint with JSON containing identifier and password
     login_response = requests.post(f"{API_URL}/login", json={
         "identifier": USERNAME,
@@ -41,8 +41,8 @@ def run_stress_test():
     print("Login successful! Token acquired.")
 
     # 3. SPAM TASKS
-    print(f"🔥 Starting CPU Attack ({NUM_TASKS} tasks)...")
-    print(f"⏱️  Rate limit is 500 requests/hour. Sending in batches with delays...")
+    print(f"Starting CPU Attack ({NUM_TASKS} tasks)...")
+    print(f"⏱Rate limit is 500 requests/hour. Sending in batches with delays...")
     
     # scheduled_at should be in MINUTES from now (not Unix timestamp)
     # Set to 0 to schedule immediately
@@ -59,7 +59,7 @@ def run_stress_test():
         end_idx = min((batch + 1) * BATCH_SIZE, NUM_TASKS)
         batch_size = end_idx - start_idx
         
-        print(f"\n📦 Batch {batch + 1}/{num_batches} ({batch_size} tasks)...")
+        print(f"\nBatch {batch + 1}/{num_batches} ({batch_size} tasks)...")
         
         for i in range(start_idx, end_idx):
             # We send the "heavy_task" payload we added to the worker earlier
@@ -90,11 +90,11 @@ def run_stress_test():
         # If not the last batch and hit rate limit, wait before next batch
         if batch < num_batches - 1 and failed_count > 0:
             wait_time = 10
-            print(f"\n⏸️  Rate limit hit. Waiting {wait_time}s before next batch...")
+            print(f"\n⏸Rate limit hit. Waiting {wait_time}s before next batch...")
             time.sleep(wait_time)
             failed_count = 0  # Reset for next batch
     
-    print(f"\n✅ Done! Sent {count}/{NUM_TASKS} tasks to the Queue.")
+    print(f"\nDone! Sent {count}/{NUM_TASKS} tasks to the Queue.")
 
 if __name__ == "__main__":
     try:

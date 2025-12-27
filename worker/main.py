@@ -30,8 +30,9 @@ class AsyncWorker:
 
     async def start(self):
         logger.info(f"Async worker:{self.worker_id} started up...")
-        # Connect to the redis low i.e. Task Queue
-        self.redis = await get_async_redis_client("low")
+        # Connect to both high and low priority redis instances
+        self.redis_high = await get_async_redis_client("high")
+        self.redis_low = await get_async_redis_client("low")
 
         await self.heartbeat.start()
 
@@ -39,31 +40,41 @@ class AsyncWorker:
         while self.running:
             try:
                 # Atomically move an item from the queue to a processing queue.
+                # Try high priority queue first, then fall back to low priority.
                 # Prefer BLMOVE (atomic blocking move) when available. Fall back to
                 # BRPOPLPUSH for older Redis versions / clients.
                 raw_data = None
                 try:
-                    if hasattr(self.redis, 'blmove'):
-                        # Try blmove first (atomic blocking move). If it fails for any
-                        # reason (server doesn't support it, different signature, etc.)
-                        # fall back to brpoplpush.
+                    # Try high priority queue first (with short timeout)
+                    if hasattr(self.redis_high, 'blmove'):
                         try:
-                            raw_data = await self.redis.blmove(QUEUE_NAME, PROCESSING_QUEUE, 'RIGHT', 'LEFT', 1)
+                            raw_data = await self.redis_high.blmove(QUEUE_NAME, PROCESSING_QUEUE, 'RIGHT', 'LEFT', 1)
                         except Exception as e:
-                            logger.debug(f"blmove failed ({e}), falling back to brpoplpush")
-                            raw_data = await self.redis.brpoplpush(QUEUE_NAME, PROCESSING_QUEUE, 1)
+                            logger.debug(f"blmove on high failed ({e}), falling back to brpoplpush")
+                            raw_data = await self.redis_high.brpoplpush(QUEUE_NAME, PROCESSING_QUEUE, 1)
                     else:
-                        # brpoplpush(src, dst, timeout)
-                        raw_data = await self.redis.brpoplpush(QUEUE_NAME, PROCESSING_QUEUE, 1)
+                        raw_data = await self.redis_high.brpoplpush(QUEUE_NAME, PROCESSING_QUEUE, 1)
+                    
+                    # If no task from high priority queue, try low priority queue
+                    if not raw_data:
+                        if hasattr(self.redis_low, 'blmove'):
+                            try:
+                                raw_data = await self.redis_low.blmove(QUEUE_NAME, PROCESSING_QUEUE, 'RIGHT', 'LEFT', 1)
+                            except Exception as e:
+                                logger.debug(f"blmove on low failed ({e}), falling back to brpoplpush")
+                                raw_data = await self.redis_low.brpoplpush(QUEUE_NAME, PROCESSING_QUEUE, 1)
+                        else:
+                            raw_data = await self.redis_low.brpoplpush(QUEUE_NAME, PROCESSING_QUEUE, 1)
 
                     if raw_data:
                         try:
                             data = json.loads(raw_data)
                         except json.JSONDecodeError:
                             logger.error(f"worker:{self.worker_id} failed to decode to json")
-                            # remove the malformed message from processing queue
+                            # remove the malformed message from processing queue (try both redis instances)
                             try:
-                                await self.redis.lrem(PROCESSING_QUEUE, 0, raw_data)
+                                await self.redis_low.lrem(PROCESSING_QUEUE, 0, raw_data)
+                                await self.redis_high.lrem(PROCESSING_QUEUE, 0, raw_data)
                             except Exception:
                                 logger.exception("Failed to remove malformed message from processing queue")
                             continue
@@ -79,7 +90,8 @@ class AsyncWorker:
                             # queue once handler.run returns (success or failure).
                             try:
                                 if raw_data:
-                                    await self.redis.lrem(PROCESSING_QUEUE, 0, raw_data)
+                                    await self.redis_low.lrem(PROCESSING_QUEUE, 0, raw_data)
+                                    await self.redis_high.lrem(PROCESSING_QUEUE, 0, raw_data)
                             except Exception:
                                 logger.exception("Failed to remove item from processing queue in finally")
                 except Exception as e:
@@ -95,7 +107,8 @@ class AsyncWorker:
 
         logger.info(f"Worker:{self.worker_id} shutting down ..")
         await self.heartbeat.stop()
-        await self.redis.aclose()
+        await self.redis_low.aclose()
+        await self.redis_high.aclose()
 
     def request_shutdown(self):
         logger.info("Shutdown signal received.")
