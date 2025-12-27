@@ -4,9 +4,8 @@ metadata:
   name: worker
   namespace: taskflow
 spec:
-  # You had 4 replicas in Docker Compose.
-  # In K8s, we start with 2 for high availability, but you can scale this 
-  # to 10+ easily using 'kubectl scale' or Autoscaling (HPA) later.
+  # In K8s, we start with 2 for high availability.
+  # The HPA (Autoscaler) will adjust this number between 1 and 10 automatically.
   replicas: 2
   selector:
     matchLabels:
@@ -19,9 +18,9 @@ spec:
       containers:
         - name: worker
           image: ghcr.io/dhruvkshah75/taskflow-worker:latest
-          # so we do not need to override it here unless you want to change flags.
+          imagePullPolicy: Never 
+          
           # Load ALL Configs and Secrets
-          # The worker needs access to EVERYTHING:
           envFrom:
             - configMapRef:
                 name: taskflow-app-config
@@ -35,18 +34,19 @@ spec:
                 name: taskflow-redis-secret
             - secretRef:
                 name: taskflow-app-secret
-          # to fix the error as it is not connecting to the redis instances 
+          
+          # Environment Overrides & DNS Fixes
           env:
           - name: REDIS_HOST_HIGH
-            value: "redis-high"
+            # FIX: Use Fully Qualified Domain Name to bypass DNS search issues
+            value: "redis-high.taskflow.svc.cluster.local"
           - name: REDIS_HOST_LOW
-            value: "redis-low"
+            # FIX: Use Fully Qualified Domain Name
+            value: "redis-low.taskflow.svc.cluster.local"
           - name: DATABASE_URL
             value: "postgresql://$(POSTGRES_USER):$(POSTGRES_PASSWORD)@$(POSTGRES_HOST):$(POSTGRES_PORT)/$(POSTGRES_DB)"
-          # Resource Limits (CRITICAL FOR WORKERS)
-          # Workers do the heavy lifting (image processing, data crunching). We give them higher limits than the Queue Manager.
-          # If a worker tries to eat too much RAM, K8s will kill and restart it 
-          # to protect the rest of the node.
+          
+          # Resource Limits (CRITICAL FOR HPA)
           resources:
             requests:
               memory: "128Mi"

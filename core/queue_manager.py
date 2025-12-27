@@ -136,6 +136,58 @@ class QueueManager:
         
 
     # ===================== LOOPS RUN ONLY BY THE LEADER =======================
+    def queued_reconciliation_loop(self):
+        """
+        Recovery mechanism for tasks marked as QUEUED in DB but missing from Redis.
+        This can happen if Redis was down when tasks were being queued.
+        Runs less frequently than scheduler to avoid overhead.
+        """
+        logger.info("Queued reconciliation loop started.")
+        while self.running:
+            if not self.is_leader:
+                time.sleep(30)  # Check every 30 seconds when not leader
+                continue
+            
+            db = SessionLocal()
+            try:
+                # Find tasks that are marked QUEUED in DB
+                queued_tasks = (
+                    db.query(Tasks)
+                    .filter(Tasks.status == TaskStatus.QUEUED)
+                    .limit(100)
+                    .all()
+                )
+                
+                if queued_tasks:
+                    logger.info(f"Reconciling {len(queued_tasks)} QUEUED tasks with Redis")
+                    requeued_count = 0
+                    
+                    for task in queued_tasks:
+                        payload = {"task_id": task.id}
+                        priority = getattr(task, "priority", "low") or "low"
+                        
+                        # Try to push to Redis
+                        success = push_task("default", payload, priority=priority)
+                        if success:
+                            requeued_count += 1
+                        else:
+                            logger.error(f"Failed to reconcile task {task.id} to Redis")
+                    
+                    if requeued_count > 0:
+                        logger.info(f"Successfully reconciled {requeued_count} tasks to Redis")
+                
+                db.close()
+            except Exception as e:
+                logger.error(f"Error in queued reconciliation: {e}")
+                try:
+                    db.rollback()
+                    db.close()
+                except Exception:
+                    pass
+            
+            time.sleep(30)  # Run every 30 seconds
+        logger.info("Queued reconciliation loop stopped.")
+
     def scheduler_loop(self):
         """
         Efficient scheduler:
@@ -364,6 +416,9 @@ class QueueManager:
         # 4. Start Processing Reclaimer (moves stale items from processing back)
         t_reclaimer = threading.Thread(target=self.processing_reclaimer_loop, daemon=True)
         t_reclaimer.start()
+        # 5. Start Queued Reconciliation (ensures QUEUED tasks are in Redis)
+        t_reconciler = threading.Thread(target=self.queued_reconciliation_loop, daemon=True)
+        t_reconciler.start()
 
         # Keep main thread alive to handle signals
         try:

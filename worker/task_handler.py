@@ -23,9 +23,9 @@ logger = logging.getLogger(__name__)
 def perform_heavy_computation():
     """
     Simulates heavy CPU load to trigger HPA scaling.
-    Calculates square roots 3 million times to spike CPU.
+    Calculates square roots 50 million times to spike CPU.
     """
-    for i in range(3000000):
+    for i in range(50000000):
         math.sqrt(i)
 # -------------------------
 

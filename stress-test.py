@@ -5,7 +5,7 @@ import json
 from datetime import datetime, timezone
 
 # ⚙️ CONFIGURATION
-API_URL = "http://127.0.0.1"  # Or your Minikube IP
+API_URL = "http://127.0.0.1:8080"  # Or your Minikube IP
 # Use timestamp to create unique user for each run (avoids rate limit carryover)
 USERNAME = f"stress_tester_{int(time.time())}"
 PASSWORD = "strongpassword123"
