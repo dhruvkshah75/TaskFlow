@@ -27,15 +27,13 @@ The system leverages **FastAPI** for high-performance task submission and monito
     <td style="width: 50%; vertical-align: top;">
       <img src="./assets/illustration.png" 
            style="width: 100%; aspect-ratio: 16 / 9; object-fit: cover;" 
-           alt="TaskFlow Scaling Proof">
+           alt="TaskFlow Screenshot">
     </td>
-    <td style="width: 50%; vertical-align: middle; text-align: center;">
-      <a href="https://github.com/dhruvvkshah75/TaskFlow/raw/main/assets/demo1.mp4" target="_blank">
-        <img src="https://img.shields.io/badge/▶_CLICK_TO_WATCH_DEMO-FF0000?style=for-the-badge&logo=youtube&logoColor=white" 
-             alt="Watch Demo Video" 
-             style="width: 80%;">
-      </a>
-      <p><i>(Click badge to play .mp4)</i></p>
+    <td style="width: 50%; vertical-align: top;">
+      <video src="./assets/demo.mp4" 
+             style="width: 100%; aspect-ratio: 16 / 9;" 
+             controls>
+      </video>
     </td>
   </tr>
 </table>
