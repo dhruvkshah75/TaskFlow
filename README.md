@@ -133,7 +133,7 @@ kubectl apply -f k8s/queue-manager.yaml
 kubectl get pods -n taskflow -w
 
 # 5. For port forwarding 
-kubectl port-forward svc/taskflow-api 8080:80 -n taskflow
+kubectl port-forward -n taskflow svc/taskflow-api 8080:80
 ```
 
 ### **3. Accessing the API**
