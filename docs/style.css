@@ -274,27 +274,9 @@ body::before {
     margin-bottom: 4rem;
 }
 
-.demo-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(450px, 1fr));
-    gap: 3rem;
-    margin-top: 3rem;
-}
-
-.demo-item {
-    display: flex;
-    flex-direction: column;
-    gap: 1.5rem;
-}
-
-.demo-item-title {
-    font-size: 1.5rem;
-    font-weight: 700;
-    color: var(--text-primary);
-    text-align: center;
-}
-
 .demo-container {
+    max-width: 1000px;
+    margin: 0 auto;
     border-radius: 20px;
     overflow: hidden;
     box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
@@ -302,6 +284,10 @@ body::before {
     background: var(--card-bg);
     backdrop-filter: blur(10px);
     transition: all 0.3s ease;
+}
+
+.demo-spacing {
+    margin-top: 3rem;
 }
 
 .demo-container:hover {
@@ -600,8 +586,7 @@ body::before {
 
     .features-grid,
     .quickstart-grid,
-    .tech-stack-grid,
-    .demo-grid {
+    .tech-stack-grid {
         grid-template-columns: 1fr;
     }
 
