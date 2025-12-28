@@ -286,8 +286,20 @@ body::before {
     transition: all 0.3s ease;
 }
 
-.demo-spacing {
-    margin-top: 3rem;
+.demo-section-spacing {
+    margin-top: 5rem;
+}
+
+.demo-heading {
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    text-align: center;
+    margin-bottom: 2rem;
+    background: var(--gradient);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
 }
 
 .demo-container:hover {
@@ -463,6 +475,10 @@ body::before {
 
 .tech-logo.redis-logo {
     filter: brightness(0) invert(1);
+}
+
+.tech-logo.k8s-logo {
+    height: 45px;
 }
 
 .tech-item span {
