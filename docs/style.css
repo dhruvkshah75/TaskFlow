@@ -292,57 +292,6 @@ body {
     line-height: 1.8;
 }
 
-/* Architecture Section */
-.architecture-section {
-    padding: 6rem 0;
-    background: var(--dark-bg);
-}
-
-.architecture-diagram {
-    max-width: 900px;
-    margin: 3rem auto;
-    border-radius: 12px;
-    overflow: hidden;
-    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
-}
-
-.architecture-img {
-    width: 100%;
-    height: auto;
-    display: block;
-}
-
-.architecture-components {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 1.5rem;
-    margin-top: 3rem;
-}
-
-.component {
-    background: var(--card-bg);
-    padding: 1.5rem;
-    border-radius: 10px;
-    border-left: 4px solid var(--primary-color);
-    transition: all 0.3s ease;
-}
-
-.component:hover {
-    transform: translateX(5px);
-    box-shadow: 0 5px 20px rgba(99, 102, 241, 0.2);
-}
-
-.component h4 {
-    font-size: 1.2rem;
-    margin-bottom: 0.5rem;
-    color: var(--primary-color);
-}
-
-.component p {
-    color: var(--text-secondary);
-    font-size: 0.95rem;
-}
-
 /* Quick Start Section */
 .quickstart-section {
     padding: 6rem 0;
