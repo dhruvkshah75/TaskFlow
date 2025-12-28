@@ -287,19 +287,16 @@ body::before {
 }
 
 .demo-section-spacing {
-    margin-top: 5rem;
+    margin-top: 6rem;
 }
 
 .demo-heading {
-    font-size: 2rem;
-    font-weight: 700;
+    font-size: 2.5rem;
+    font-weight: 800;
     color: var(--text-primary);
-    text-align: center;
+    text-align: left;
     margin-bottom: 2rem;
-    background: var(--gradient);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
+    letter-spacing: -0.02em;
 }
 
 .demo-container:hover {
