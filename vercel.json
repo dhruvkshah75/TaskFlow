@@ -1,6 +1,5 @@
 {
-  "buildCommand": "ls -la docs",
+  "buildCommand": "echo 'Static site ready'",
   "outputDirectory": "docs",
-  "installCommand": "echo 'Static site - no dependencies needed'",
-  "framework": null
+  "installCommand": "echo 'No dependencies needed'"
 }
