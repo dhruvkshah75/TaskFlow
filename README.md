@@ -119,6 +119,32 @@ data:
 ### **2. Deploying the Stack**
 
 ```bash
+# command to create a screts.yaml file
+kubectl create secret generic taskflow-db-secret \
+  --namespace=taskflow \
+  --from-literal=POSTGRES_DB=taskflow_db \
+  --from-literal=POSTGRES_USER=postgres \
+  --from-literal=POSTGRES_PASSWORD=password \
+  --from-literal=DATABASE_URL=postgresql://postgres:password@taskflow-pgbouncer:6432/taskflow_db \
+  --dry-run=client -o yaml > secrets.yaml
+echo "---" >> secrets.yaml
+kubectl create secret generic taskflow-redis-secret \
+  --namespace=taskflow \
+  --from-literal=REDIS_PASSWORD=test_password \
+  --from-literal=REDIS_HOST_HIGH=redis-high \
+  --from-literal=REDIS_PORT_HIGH=6379 \
+  --from-literal=REDIS_HOST_LOW=redis-low \
+  --from-literal=REDIS_PORT_LOW=6379 \
+  --dry-run=client -o yaml >> secrets.yam
+echo "---" >> secrets.yaml
+kubectl create secret generic taskflow-app-secret \
+  --namespace=taskflow \
+  --from-literal=SECRET_KEY=test_secret_key_for_ci_only \
+  --from-literal=ALGORITHM=HS256 \
+  --from-literal=ACCESS_TOKEN_EXPIRE_MINUTES=60 \
+  --dry-run=client -o yaml >> secrets.yaml
+
+
 # 1. Create Namespace & Configs
 kubectl create namespace taskflow
 kubectl apply -f k8s/secrets.yaml
