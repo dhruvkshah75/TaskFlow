@@ -1,0 +1,71 @@
+name: Integration Stress Test
+
+on:
+  push: 
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  end-to-end-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+      
+      - name: Create K8S Kind Cluster
+        uses: helm/kind-action@v1.8.0
+        with:
+          cluster_name: taskflow-ci
+
+      - name: Build docker images
+        run: |
+          docker build -t taskflow-api:test -f api/Dockerfile .
+          docker build -t taskflow-worker:test -f worker/Dockerfile .
+
+      - name: Load Images into Kind
+        run: |
+          kind load docker-image taskflow-api:test --name taskflow-ci
+          kind load docker-image taskflow-worker:test --name taskflow-ci
+
+      - name: Deploy Application
+        run: |
+          kubectl create namespace taskflow
+          
+          sed -i 's|ghcr.io/dhruvkshah75/taskflow-api:latest|taskflow-api:test|g' k8s/apps/api.yaml
+          sed -i 's|ghcr.io/dhruvkshah75/taskflow-worker:latest|taskflow-worker:test|g' k8s/apps/worker.yaml
+          sed -i 's|imagePullPolicy: Always|imagePullPolicy: Never|g' k8s/apps/*.yaml
+          sed -i 's|imagePullPolicy: IfNotPresent|imagePullPolicy: Never|g' k8s/apps/*.yaml
+          
+          kubectl apply -f k8s/01-secrets.yaml
+          kubectl apply -f k8s/02-configmaps.yaml
+          kubectl apply -f k8s/infrastructure/
+          kubectl apply -f k8s/apps/
+          
+          echo "Waiting for pods to be ready..."
+          kubectl wait --namespace taskflow --for=condition=ready pod --selector=app=postgres --timeout=120s
+          kubectl wait --namespace taskflow --for=condition=ready pod --selector=app=api --timeout=120s
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Install Test Dependencies
+        run: pip install requests psycopg2-binary
+
+      - name: Run Stress Test & Verification
+        run: |
+          kubectl port-forward -n taskflow svc/taskflow-pgbouncer 6432:6432 &
+          kubectl port-forward -n taskflow svc/taskflow-api 8080:80 &
+          
+          sleep 10
+          
+          echo "Sending 200 tasks..."
+          python stress-test.py
+          
+          echo "verifying data..."
+          python verify_jobs.py
+      
