@@ -34,7 +34,7 @@ jobs:
         run: |
           kubectl create namespace taskflow
           
-          # Create secrets dynamically for CI testing
+          # Create secrets dynamically 
           kubectl create secret generic taskflow-db-secret \
             --namespace=taskflow \
             --from-literal=POSTGRES_DB=taskflow_db \
