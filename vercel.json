@@ -1,5 +1,4 @@
 {
   "buildCommand": "echo 'Static site ready'",
-  "outputDirectory": "docs",
   "installCommand": "echo 'No dependencies needed'"
 }
