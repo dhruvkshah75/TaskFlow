@@ -1,6 +1,7 @@
 {
-  "buildCommand": "echo 'No build needed for static site'",
+  "buildCommand": "mkdir -p docs && ls -la docs/",
   "outputDirectory": "docs",
   "cleanUrls": true,
-  "trailingSlash": false
+  "trailingSlash": false,
+  "installCommand": "echo 'Skipping install for static site'"
 }

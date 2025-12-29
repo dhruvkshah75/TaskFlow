@@ -28,7 +28,7 @@ def get_completed_count(cursor):
         return 0
 
 def verify_tasks():
-    print(f"⏳ Waiting for {EXPECTED_TASKS} tasks to complete (Timeout: {TIMEOUT_SECONDS}s)...")
+    print(f"Waiting for {EXPECTED_TASKS} tasks to complete (Timeout: {TIMEOUT_SECONDS}s)...")
     
     start_time = time.time()
     
