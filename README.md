@@ -37,6 +37,10 @@ The system leverages **FastAPI** for high-performance task submission and monito
   </tr>
 </table>
 
+## Live Demo
+
+<img src="assets/output_high_res.gif" width="100%" alt="TaskFlow Auto-Scaling Demo">
+
 ## Quick Deployment (Docker)
 
 Deploy TaskFlow in production using Docker Compose.
