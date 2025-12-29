@@ -1,7 +1,6 @@
 {
-  "buildCommand": "mkdir -p docs && ls -la docs/",
+  "buildCommand": "ls -la docs",
   "outputDirectory": "docs",
-  "cleanUrls": true,
-  "trailingSlash": false,
-  "installCommand": "echo 'Skipping install for static site'"
+  "installCommand": "echo 'Static site - no dependencies needed'",
+  "framework": null
 }
