@@ -34,12 +34,33 @@ jobs:
         run: |
           kubectl create namespace taskflow
           
+          # Create secrets dynamically for CI testing
+          kubectl create secret generic taskflow-db-secret \
+            --namespace=taskflow \
+            --from-literal=POSTGRES_DB=taskflow_db \
+            --from-literal=POSTGRES_USER=postgres \
+            --from-literal=POSTGRES_PASSWORD=password \
+            --from-literal=DATABASE_URL=postgresql://postgres:password@taskflow-pgbouncer:6432/taskflow_db
+          
+          kubectl create secret generic taskflow-redis-secret \
+            --namespace=taskflow \
+            --from-literal=REDIS_PASSWORD=test_password \
+            --from-literal=REDIS_HOST_HIGH=redis-high \
+            --from-literal=REDIS_PORT_HIGH=6379 \
+            --from-literal=REDIS_HOST_LOW=redis-low \
+            --from-literal=REDIS_PORT_LOW=6379
+          
+          kubectl create secret generic taskflow-app-secret \
+            --namespace=taskflow \
+            --from-literal=SECRET_KEY=test_secret_key_for_ci_only \
+            --from-literal=ALGORITHM=HS256 \
+            --from-literal=ACCESS_TOKEN_EXPIRE_MINUTES=60
+          
           sed -i 's|ghcr.io/dhruvkshah75/taskflow-api:latest|taskflow-api:test|g' k8s/apps/api.yaml
           sed -i 's|ghcr.io/dhruvkshah75/taskflow-worker:latest|taskflow-worker:test|g' k8s/apps/worker.yaml
           sed -i 's|imagePullPolicy: Always|imagePullPolicy: Never|g' k8s/apps/*.yaml
           sed -i 's|imagePullPolicy: IfNotPresent|imagePullPolicy: Never|g' k8s/apps/*.yaml
           
-          kubectl apply -f k8s/01-secrets.yaml
           kubectl apply -f k8s/02-configmaps.yaml
           kubectl apply -f k8s/infrastructure/
           kubectl apply -f k8s/apps/
