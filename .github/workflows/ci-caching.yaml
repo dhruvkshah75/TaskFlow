@@ -1,7 +1,13 @@
 name: Integration Stress Test
 
 on:
-  workflow_dispatch:
+  push: 
+    branches: [ "main" ]
+    paths:
+      - "**"
+      - "!README.md"
+  pull_request:
+    branches: [ "main" ]
 
 jobs:
   end-to-end-test:
@@ -12,15 +18,51 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
       
+      # 1. Setup Docker Buildx (Required for Docker caching)
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      # 2. Setup Python with Caching
+      # We cache the pip directory to speed up dependency installs
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+      
+      - name: Cache Pip Packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          # Key includes runner OS. We don't have a requirements.txt to hash, 
+          # so we use a generic key. It will update if you clear caches manually.
+          key: ${{ runner.os }}-pip-cache
+
       - name: Create K8S Kind Cluster
         uses: helm/kind-action@v1.8.0
         with:
           cluster_name: taskflow-ci
 
-      - name: Build docker images
-        run: |
-          docker build -t taskflow-api:test -f api/Dockerfile .
-          docker build -t taskflow-worker:test -f worker/Dockerfile .
+      # 3. Build API Image (With Caching)
+      - name: Build and load API image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: api/Dockerfile
+          tags: taskflow-api:test
+          load: true             # Loads image into Docker daemon so Kind can find it
+          cache-from: type=gha   # Pulls cache from GitHub
+          cache-to: type=gha,mode=max # Pushes new cache to GitHub
+
+      # 4. Build Worker Image (With Caching)
+      - name: Build and load Worker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: worker/Dockerfile
+          tags: taskflow-worker:test
+          load: true
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
       - name: Load Images into Kind
         run: |
@@ -53,8 +95,10 @@ jobs:
             --from-literal=ALGORITHM=HS256 \
             --from-literal=ACCESS_TOKEN_EXPIRE_MINUTES=60
           
+          # Updates specifically for the test environment
           sed -i 's|ghcr.io/dhruvkshah75/taskflow-api:latest|taskflow-api:test|g' k8s/apps/api.yaml
           sed -i 's|ghcr.io/dhruvkshah75/taskflow-worker:latest|taskflow-worker:test|g' k8s/apps/worker.yaml
+          # Force Kubernetes to use the local loaded images
           sed -i 's|imagePullPolicy: Always|imagePullPolicy: Never|g' k8s/apps/*.yaml
           sed -i 's|imagePullPolicy: IfNotPresent|imagePullPolicy: Never|g' k8s/apps/*.yaml
           
@@ -66,12 +110,8 @@ jobs:
           kubectl wait --namespace taskflow --for=condition=ready pod --selector=app=postgres --timeout=120s
           kubectl wait --namespace taskflow --for=condition=ready pod --selector=app=api --timeout=120s
 
-      - name: Setup Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.10'
-
       - name: Install Test Dependencies
+        # This will now be faster because pip checks the cache first
         run: pip install requests psycopg2-binary
 
       - name: Run Stress Test & Verification
@@ -86,4 +126,3 @@ jobs:
           
           echo "verifying data..."
           python verify_jobs.py
-      
