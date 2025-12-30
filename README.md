@@ -6,22 +6,29 @@
 [![Python](https://img.shields.io/badge/python-3.11+-blue.svg?style=flat-square&logo=python&logoColor=white)](https://www.python.org/)
 [![Redis](https://img.shields.io/badge/redis-%23DD0031.svg?style=flat-square&logo=redis&logoColor=white)](https://redis.io/)
 [![PostgreSQL](https://img.shields.io/badge/postgresql-%23316192.svg?style=flat-square&logo=postgresql&logoColor=white)](https://www.postgresql.org/)
+[![CI/CD](https://img.shields.io/badge/CI%2FCD-Automated-brightgreen?style=flat-square&logo=github-actions)](https://github.com/dhruvkshah75/TaskFlow/actions)
 
 ## Overview
 
-**TaskFlow** is a robust, distributed task queue system built to handle asynchronous background processing at scale. Designed with a microservices architecture, it reliably manages, schedules, and executes jobs across multiple concurrent worker nodes.
+**TaskFlow** is a robust, production-ready distributed task queue system built to handle asynchronous background processing at scale. Designed with a microservices architecture, it reliably manages, schedules, and executes jobs across multiple concurrent worker nodes with built-in auto-scaling capabilities.
 
 The system leverages **FastAPI** for high-performance task submission and monitoring, **Redis** for efficient message brokering and state management, and **PostgreSQL** for durable persistence of task history and results. By implementing the "Competing Consumers" pattern, TaskFlow ensures load balancing and fault tolerance—if one worker fails, others seamlessly pick up the load.
 
 **Key Capabilities:**
-* **Distributed Processing:** Horizontally scalable worker nodes process tasks in parallel.
-* **Reliable Scheduling:** Intelligent task distribution with Redis-based locking to prevent race conditions.
-* **Production Ready:** Supports both Docker Compose and Kubernetes deployments.
-* **Persistent & Observable:** Complete audit trail of task states (Queued → Processing → Completed/Failed) via REST endpoints.
+* **Distributed Processing:** Horizontally scalable worker nodes process tasks in parallel
+* **Reliable Scheduling:** Intelligent task distribution with Redis-based locking to prevent race conditions
+* **Production Ready:** Docker Compose and Kubernetes deployments with automated CI/CD pipelines
+* **Persistent & Observable:** Complete audit trail of task states (Queued → Processing → Completed/Failed) via REST endpoints
+* **Auto-Scaling:** Kubernetes HPA (Horizontal Pod Autoscaler) support for dynamic worker scaling based on queue depth
+* **Continuous Integration:** Automated end-to-end stress testing with 200+ concurrent tasks validation
+* **Interactive Showcase:** Live demo website with project overview and system architecture
 
 ---
 
 ## See TaskFlow in Action
+
+**[Live Showcase Website](https://taskflow-io.vercel.app/)** - Interactive demonstration with project overview, architecture, and demo videos
+
 <table style="width: 100%;">
   <tr>
     <td style="width: 50%; vertical-align: top;">
@@ -73,6 +80,31 @@ docker compose --env-file .env.production -f docker-compose.prod.yml up -d
 ```bash
 curl http://localhost:8000/status
 ```
+
+-----
+
+## CI/CD & Testing
+
+TaskFlow includes automated continuous integration with comprehensive end-to-end testing:
+
+### **Automated Stress Testing**
+- **Workflow**: Triggered on every push to main (excluding README changes)
+- **Test Coverage**: Deploys full Kubernetes stack with 200+ concurrent task submissions
+- **Validation**: Automated verification of task processing, database persistence, and worker scaling
+- **Caching**: Docker layer caching for faster builds (~50% reduction in CI time)
+
+### **Run Tests Locally**
+```bash
+# Submit 200 concurrent tasks to stress test the system
+python stress-test.py
+
+# Verify all tasks were processed correctly
+python verify_jobs.py
+```
+
+View CI/CD workflows in `.github/workflows/`:
+- `ci.yaml` - Standard integration tests
+- `ci-caching.yaml` - Optimized workflow with Docker and pip caching
 
 -----
 
@@ -217,33 +249,61 @@ python -m worker.main
 
 ## Architecture
 
-- **API Service:** Exposes REST endpoints for task submission and monitoring.
-- **Queue Manager:** Distributes tasks to appropriate Redis queues.
-- **Workers:** Scalable consumers that execute tasks.
-- **Redis:** In-memory message broker.
-- **PostgreSQL:** Persistent storage for users and task history.
+**TaskFlow** implements a distributed microservices architecture optimized for reliability and scalability:
+
+- **API Service:** FastAPI-based REST endpoints for task submission, status monitoring, and queue management
+- **Queue Manager:** Intelligent task distributor with priority queue support (high/low priority)
+- **Workers:** Auto-scaling Python workers with concurrent task execution
+- **Redis (Dual Queues):** Separate high and low priority queues for task prioritization
+- **PostgreSQL + PgBouncer:** Connection pooling for efficient database access and task persistence
+- **Kubernetes HPA:** Automatic horizontal scaling based on queue depth and CPU metrics
+
+### **Key Features:**
+- **Priority Queuing:** Separate Redis instances for high and low priority tasks
+- **Connection Pooling:** PgBouncer reduces PostgreSQL connection overhead
+- **Fault Tolerance:** Worker pods automatically restart on failure
+- **Observable:** Built-in health checks and status endpoints
 
 ## Repository Structure
 
 ```
 TaskFlow/
 ├── Deployment
-│   ├── docker-compose.prod.yml      # Docker Production
-│   ├── k8s/                        # Kubernetes Manifests
-│   │   ├── apps/                   # API, Worker, Queue Manager
-│   │   └── infrastructure/         # Redis, Postgres, Configs
+│   ├── docker-compose.prod.yml      # Production Docker Compose
+│   ├── k8s/                         # Kubernetes Manifests
+│   │   ├── apps/                    # API, Worker, Queue Manager
+│   │   ├── infrastructure/          # Redis, Postgres, PgBouncer
+│   │   ├── 02-configmaps.yaml       # Application configuration
+│   │   └── secrets.yaml.example     # Secret templates (gitignored)
+│   └── .github/workflows/           # CI/CD Pipelines
+│       ├── ci.yaml                  # Standard integration tests
+│       └── ci-caching.yaml          # Optimized builds with caching
 │
 ├── API Service
-│   └── api/                        # FastAPI application
+│   └── api/                         # FastAPI application
+│       ├── routers/                 # REST endpoints
+│       └── main.py                  # Application entry point
 │
 ├── Core Services
-│   └── core/                       # Database, Config, Redis Client
+│   └── core/                        # Shared utilities
+│       ├── database.py              # PostgreSQL connection
+│       ├── redis_client.py          # Redis client wrapper
+│       └── config.py                # Environment configuration
 │
 ├── Worker Service
-│   └── worker/                     # Python Task Executors
+│   └── worker/                      # Task execution engine
+│       ├── main.py                  # Worker process
+│       └── tasks.py                 # Task handlers
 │
-└── Database
-    └── alembic/                    # Migration scripts
+├── Database
+│   └── alembic/                     # Database migrations
+│
+└── public/                      # Project website (Vercel)
+│     ├── index.html               # Interactive demo page
+│     └── assets/                  # Demo GIFs and illustrations
+│
+├── stress-test.py               # Load testing (200 tasks)
+└── verify_jobs.py               # CI/CD validation script
 ```
 
 ## Example `.env` Configuration
@@ -251,7 +311,10 @@ TaskFlow/
 Create a `.env` file in the root directory:
 
 ```env
+# Database Configuration
 DATABASE_URL=postgresql://user:pass@localhost:5432/taskflow
+
+# Security
 SECRET_KEY=replace_with_secure_key
 ALGORITHM=HS256
 ACCESS_TOKEN_EXPIRE_MINUTES=180
@@ -262,10 +325,37 @@ REDIS_HOST_HIGH=redis_high
 REDIS_PORT_HIGH=6379
 REDIS_HOST_LOW=redis_low
 REDIS_PORT_LOW=6379
+REDIS_PASSWORD=your_redis_password
 
 # App Settings
 RATE_LIMIT_PER_HOUR=1000
 HEARTBEAT_INTERVAL_SECONDS=30
 ```
+
+---
+
+## Recent Updates
+
+### Latest Features (Dec 2024)
+- **CI/CD Automation**: Automated Kubernetes deployment and stress testing on every commit
+- **Performance Optimization**: Docker layer caching reduces build time by ~50%
+- **Live Showcase**: Deployed interactive website at [taskflow-io.vercel.app](https://taskflow-io.vercel.app/)
+- **Enhanced Documentation**: Added Kubernetes secrets generation commands and deployment guides
+- **Stress Testing**: Automated validation with 200+ concurrent task submissions
+- **Smart CI Triggers**: Skip CI on documentation-only changes for faster iterations
+
+---
+
+## Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request. For major changes, please open an issue first to discuss what you would like to change.
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+---
+
+
 
 
