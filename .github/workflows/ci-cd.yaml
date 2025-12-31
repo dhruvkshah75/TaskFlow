@@ -119,7 +119,8 @@ jobs:
           kubectl expose pod redis-low --name=redis-low --port=6379 -n taskflow
 
           # 4. Apply Configs & Apps
-          kubectl apply -f k8s/infrastructure/02-configmaps.yaml
+          kubectl apply -f k8s/02-configmaps.yaml
+          kubectl apply -f k8s/infrastructure/
           kubectl apply -f k8s/apps/
           
           echo "Waiting for pods to be ready..."
