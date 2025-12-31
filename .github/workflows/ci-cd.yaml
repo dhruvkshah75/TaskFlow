@@ -1,0 +1,254 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ "main", "feat/15-ci-cd-pipeline" ]
+    paths:
+      - "**"
+      - "!README.md"
+  pull_request:
+    branches: [ "main" ]
+  workflow_dispatch:
+    
+
+permissions:
+  packages: write
+  contents: read
+
+jobs:
+  # JOB 1: CI (Integration Stress Test)
+  end-to-end-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+      
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+      
+      - name: Cache Pip Packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-cache
+
+      - name: Create K8S Kind Cluster
+        uses: helm/kind-action@v1.8.0
+        with:
+          cluster_name: taskflow-ci
+
+      # --- BUILD STEP ---
+      - name: Build and load API
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: api/Dockerfile
+          tags: taskflow-api:test
+          load: true
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build and load Worker
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: worker/Dockerfile
+          tags: taskflow-worker:test
+          load: true
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build and load Queue Manager
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: core/Dockerfile
+          tags: taskflow-queue-manager:test
+          load: true
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Load Images into Kind
+        run: |
+          kind load docker-image taskflow-api:test --name taskflow-ci
+          kind load docker-image taskflow-worker:test --name taskflow-ci
+          kind load docker-image taskflow-queue-manager:test --name taskflow-ci
+
+      - name: Deploy Application
+        run: |
+          kubectl create namespace taskflow
+          
+          # 1. Create Secrets
+          kubectl create secret generic taskflow-db-secret --namespace=taskflow \
+            --from-literal=POSTGRES_DB=taskflow_db \
+            --from-literal=POSTGRES_USER=postgres \
+            --from-literal=POSTGRES_PASSWORD=password \
+            --from-literal=DATABASE_URL=postgresql://postgres:password@taskflow-pgbouncer:6432/taskflow_db
+          
+          kubectl create secret generic taskflow-redis-secret --namespace=taskflow \
+            --from-literal=REDIS_PASSWORD=test_password \
+            --from-literal=REDIS_HOST_HIGH=redis-high --from-literal=REDIS_PORT_HIGH=6379 \
+            --from-literal=REDIS_HOST_LOW=redis-low --from-literal=REDIS_PORT_LOW=6379
+          
+          kubectl create secret generic taskflow-app-secret --namespace=taskflow \
+            --from-literal=SECRET_KEY=test_secret_key_for_ci_only \
+            --from-literal=ALGORITHM=HS256 \
+            --from-literal=ACCESS_TOKEN_EXPIRE_MINUTES=60
+          
+          # 2. Patch Manifests to use Local Test Images
+          # IMPORTANT: We replace whatever image is in your YAML with our local 'test' tags
+          sed -i 's|image: .*taskflow-api.*|image: taskflow-api:test|g' k8s/apps/api.yaml
+          sed -i 's|image: .*taskflow-worker.*|image: taskflow-worker:test|g' k8s/apps/worker.yaml
+          sed -i 's|image: .*taskflow-queue-manager.*|image: taskflow-queue-manager:test|g' k8s/apps/queue-manager.yaml
+          
+          # Force K8s to use local images
+          sed -i 's|imagePullPolicy: Always|imagePullPolicy: Never|g' k8s/apps/*.yaml
+          sed -i 's|imagePullPolicy: IfNotPresent|imagePullPolicy: Never|g' k8s/apps/*.yaml
+          
+          # 3. Deploy Ephemeral Redis (Since queue-manager needs it)
+          kubectl run redis-high --image=redis:alpine --labels=app=redis-high --port=6379 -n taskflow
+          kubectl expose pod redis-high --name=redis-high --port=6379 -n taskflow
+          kubectl run redis-low --image=redis:alpine --labels=app=redis-low --port=6379 -n taskflow
+          kubectl expose pod redis-low --name=redis-low --port=6379 -n taskflow
+
+          # 4. Apply Configs & Apps
+          kubectl apply -f k8s/02-configmaps.yaml
+          kubectl apply -f k8s/infrastructure/
+          kubectl apply -f k8s/apps/
+          
+          echo "Waiting for pods to be ready..."
+          kubectl wait --namespace taskflow --for=condition=ready pod --selector=app=postgres --timeout=120s
+          kubectl wait --namespace taskflow --for=condition=ready pod --selector=app=api --timeout=120s
+
+      - name: Install Test Dependencies
+        run: pip install requests psycopg2-binary
+
+      - name: Run Stress Test & Verification
+        run: |
+          kubectl port-forward -n taskflow svc/taskflow-pgbouncer 6432:6432 &
+          kubectl port-forward -n taskflow svc/taskflow-api 8080:80 &
+          sleep 10
+          python stress-test.py
+          python verify_jobs.py
+
+  # JOB 2: Deploy to Docker Hub (Single Repo: taskflow)
+  deploy-dockerhub:
+    needs: end-to-end-test
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      # Pushing API to 'taskflow:api-latest'
+      - name: Build and Push API
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: api/Dockerfile
+          push: true
+          tags: |
+            ${{ secrets.DOCKER_USERNAME }}/taskflow:api-latest
+            ${{ secrets.DOCKER_USERNAME }}/taskflow:api-${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      # Pushing Worker to 'taskflow:worker-latest'
+      - name: Build and Push Worker
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: worker/Dockerfile
+          push: true
+          tags: |
+            ${{ secrets.DOCKER_USERNAME }}/taskflow:worker-latest
+            ${{ secrets.DOCKER_USERNAME }}/taskflow:worker-${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      # Pushing Queue Manager to 'taskflow:queue-manager-latest'
+      - name: Build and Push Queue Manager
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: queue-manager/Dockerfile
+          push: true
+          tags: |
+            ${{ secrets.DOCKER_USERNAME }}/taskflow:queue-manager-latest
+            ${{ secrets.DOCKER_USERNAME }}/taskflow:queue-manager-${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # JOB 3: Deploy to GitHub Container Registry (GHCR)
+  deploy-ghcr:
+    needs: end-to-end-test
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # GHCR supports separate packages easily, so we usually keep them separate here
+      - name: Build and Push API
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: api/Dockerfile
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository_owner }}/taskflow-api:latest
+            ghcr.io/${{ github.repository_owner }}/taskflow-api:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build and Push Worker
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: worker/Dockerfile
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository_owner }}/taskflow-worker:latest
+            ghcr.io/${{ github.repository_owner }}/taskflow-worker:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build and Push Queue Manager
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: queue-manager/Dockerfile
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository_owner }}/taskflow-queue-manager:latest
+            ghcr.io/${{ github.repository_owner }}/taskflow-queue-manager:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
