@@ -30,7 +30,7 @@ jobs:
           python-version: '3.11'
       
       - name: Cache Pip Packages
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: ~/.cache/pip
           # Key includes runner OS. We don't have a requirements.txt to hash, 
