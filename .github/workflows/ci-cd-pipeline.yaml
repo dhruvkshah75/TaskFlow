@@ -1,0 +1,237 @@
+# we use a matrix method to run building the docker containers in parallel to build faster 
+
+name: effecient-CI/CD Pipeline 
+
+on:
+  push:
+    branches: [ "main", "feat/15-ci-cd-pipeline" ]
+    paths:
+      - "**"
+      - "!README.md"
+  pull_request:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+permissions:
+  packages: write
+  contents: read
+
+jobs:
+  # JOB 1: BUILD IMAGES FOR CI (PARALLEL) using matrix 
+  build-ci-images:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      matrix:
+        service: [api, worker, queue-manager]
+        include:
+          - service: api
+            file: api/Dockerfile
+            tag: taskflow-api:test
+          - service: worker
+            file: worker/Dockerfile
+            tag: taskflow-worker:test
+          - service: queue-manager
+            file: core/Dockerfile
+            tag: taskflow-queue-manager:test
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Cache Docker Layers
+        uses: actions/cache@v3
+        with:
+          path: /tmp/.buildx-cache
+          key: ${{ runner.os }}-buildx-${{ matrix.service }}-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-buildx-${{ matrix.service }}-
+
+      - name: Build and Export
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ${{ matrix.file }}
+          tags: ${{ matrix.tag }}
+          outputs: type=docker,dest=/tmp/${{ matrix.service }}.tar
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: image-${{ matrix.service }}
+          path: /tmp/${{ matrix.service }}.tar
+          retention-days: 1
+
+  # JOB 2: INTEGRATION TEST (DEPENDS ON BUILD)
+  end-to-end-test:
+    needs: build-ci-images
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Create K8S Kind Cluster
+        uses: helm/kind-action@v1.8.0
+        with:
+          cluster_name: taskflow-ci
+
+      # Download all images built in the previous parallel step
+      - name: Download API Image
+        uses: actions/download-artifact@v4
+        with:
+          name: image-api
+          path: /tmp
+      
+      - name: Download Worker Image
+        uses: actions/download-artifact@v4
+        with:
+          name: image-worker
+          path: /tmp
+
+      - name: Download Queue Manager Image
+        uses: actions/download-artifact@v4
+        with:
+          name: image-queue-manager
+          path: /tmp
+
+
+      - name: Load Images into Docker & Kind
+        run: |
+          docker load --input /tmp/api.tar
+          docker load --input /tmp/worker.tar
+          docker load --input /tmp/queue-manager.tar
+          
+          kind load docker-image taskflow-api:test --name taskflow-ci
+          kind load docker-image taskflow-worker:test --name taskflow-ci
+          kind load docker-image taskflow-queue-manager:test --name taskflow-ci
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Deploy Application
+        run: |
+          kubectl create namespace taskflow
+          
+          # 1. Create Secrets
+          kubectl create secret generic taskflow-db-secret --namespace=taskflow \
+            --from-literal=POSTGRES_DB=taskflow_db \
+            --from-literal=POSTGRES_USER=postgres \
+            --from-literal=POSTGRES_PASSWORD=password \
+            --from-literal=DATABASE_URL=postgresql://postgres:password@taskflow-pgbouncer:6432/taskflow_db
+          
+          kubectl create secret generic taskflow-redis-secret --namespace=taskflow \
+            --from-literal=REDIS_PASSWORD=test_password \
+            --from-literal=REDIS_HOST_HIGH=redis-high --from-literal=REDIS_PORT_HIGH=6379 \
+            --from-literal=REDIS_HOST_LOW=redis-low --from-literal=REDIS_PORT_LOW=6379
+          
+          kubectl create secret generic taskflow-app-secret --namespace=taskflow \
+            --from-literal=SECRET_KEY=test_secret_key_for_ci_only \
+            --from-literal=ALGORITHM=HS256 \
+            --from-literal=ACCESS_TOKEN_EXPIRE_MINUTES=60
+          
+          # 2. Patch Manifests to use Local Test Images
+          sed -i 's|image: .*taskflow-api.*|image: taskflow-api:test|g' k8s/apps/api.yaml
+          sed -i 's|image: .*taskflow-worker.*|image: taskflow-worker:test|g' k8s/apps/worker.yaml
+          sed -i 's|image: .*taskflow-queue-manager.*|image: taskflow-queue-manager:test|g' k8s/apps/queue-manager.yaml
+          
+          # Force K8s to use local images
+          sed -i 's|imagePullPolicy: Always|imagePullPolicy: Never|g' k8s/apps/*.yaml
+          sed -i 's|imagePullPolicy: IfNotPresent|imagePullPolicy: Never|g' k8s/apps/*.yaml
+          
+          # 3. Deploy Ephemeral Redis
+          kubectl run redis-high --image=redis:alpine --labels=app=redis-high --port=6379 -n taskflow
+          kubectl expose pod redis-high --name=redis-high --port=6379 -n taskflow
+          kubectl run redis-low --image=redis:alpine --labels=app=redis-low --port=6379 -n taskflow
+          kubectl expose pod redis-low --name=redis-low --port=6379 -n taskflow
+
+          # 4. Apply Configs & Apps
+          kubectl apply -f k8s/02-configmaps.yaml
+          kubectl apply -f k8s/infrastructure/
+          kubectl apply -f k8s/apps/
+          
+          echo "Waiting for pods to be ready..."
+          kubectl wait --namespace taskflow --for=condition=ready pod --selector=app=postgres --timeout=120s
+          kubectl wait --namespace taskflow --for=condition=ready pod --selector=app=api --timeout=120s
+
+      - name: Install Test Dependencies
+        run: pip install requests psycopg2-binary
+
+      - name: Run Stress Test & Verification
+        run: |
+          kubectl port-forward -n taskflow svc/taskflow-pgbouncer 6432:6432 &
+          kubectl port-forward -n taskflow svc/taskflow-api 8080:80 &
+          sleep 10
+          python test.py
+          python verify_test.py
+
+  # JOB 3: DEPLOY TO PROD (PARALLEL & MULTI-REGISTRY)
+  deploy-images:
+    needs: end-to-end-test
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        service: [api, worker, queue-manager]
+        include:
+          - service: api
+            file: api/Dockerfile
+            hub_repo: taskflow
+            ghcr_repo: taskflow-api
+            tag_suffix: api
+          - service: worker
+            file: worker/Dockerfile
+            hub_repo: taskflow
+            ghcr_repo: taskflow-worker
+            tag_suffix: worker
+          - service: queue-manager
+            file: core/Dockerfile
+            hub_repo: taskflow
+            ghcr_repo: taskflow-queue-manager
+            tag_suffix: queue-manager
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Lowercase Repo Owner
+        run: echo "REPO_OWNER=${GITHUB_REPOSITORY_OWNER,,}" >>${GITHUB_ENV}
+
+      - name: Build and Push (Multi-Registry)
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ${{ matrix.file }}
+          push: true
+          # Pushes to BOTH Docker Hub and GHCR in one step
+          tags: |
+            ${{ secrets.DOCKER_USERNAME }}/${{ matrix.hub_repo }}:${{ matrix.tag_suffix }}-latest
+            ${{ secrets.DOCKER_USERNAME }}/${{ matrix.hub_repo }}:${{ matrix.tag_suffix }}-${{ github.sha }}
+            ghcr.io/${{ env.REPO_OWNER }}/${{ matrix.ghcr_repo }}:latest
+            ghcr.io/${{ env.REPO_OWNER }}/${{ matrix.ghcr_repo }}:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

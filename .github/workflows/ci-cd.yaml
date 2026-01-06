@@ -1,13 +1,6 @@
 name: CI/CD Pipeline
 
 on:
-  push:
-    branches: [ "main", "feat/15-ci-cd-pipeline" ]
-    paths:
-      - "**"
-      - "!README.md"
-  pull_request:
-    branches: [ "main" ]
   workflow_dispatch:
     
 
