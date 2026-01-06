@@ -1,4 +1,4 @@
-# # we use a matrix method to run building the docker containers in parallel to build faster 
+# # we use a matrix method to run building the docker
 
 name: Parallel CI & Multi-Registry Deploy
 
@@ -42,7 +42,6 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      # We save the layers to GitHub Cache so Deploy jobs can reuse them later
       - name: Build and Export for CI
         uses: docker/build-push-action@v5
         with:
@@ -50,8 +49,10 @@ jobs:
           file: ${{ matrix.file }}
           tags: ${{ matrix.tag }}
           outputs: type=docker,dest=/tmp/${{ matrix.service }}.tar
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          # CACHING OPTIMIZATION:
+          # We use 'scope' so api, worker, and queue caches don't overwrite each other
+          cache-from: type=gha,scope=${{ matrix.service }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.service }}
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
@@ -75,7 +76,6 @@ jobs:
         with:
           cluster_name: taskflow-ci
 
-      # Download all images built in the previous parallel step
       - name: Download API Image
         uses: actions/download-artifact@v4
         with:
@@ -94,7 +94,6 @@ jobs:
           name: image-queue-manager
           path: /tmp
 
-      # FAST LOAD: Bypasses Docker daemon and loads directly into Kind
       - name: Load Images into Kind (Direct)
         run: |
           kind load image-archive /tmp/api.tar --name taskflow-ci
@@ -105,12 +104,13 @@ jobs:
         uses: actions/setup-python@v4
         with:
           python-version: '3.11'
+          cache: 'pip' # ⚡ NEW: Caches pip dependencies (requests, psycopg2, etc.)
 
       - name: Deploy Application
         run: |
           kubectl create namespace taskflow
           
-          # 1. Create Secrets
+          # Secrets and Configs
           kubectl create secret generic taskflow-db-secret --namespace=taskflow \
             --from-literal=POSTGRES_DB=taskflow_db \
             --from-literal=POSTGRES_USER=postgres \
@@ -127,7 +127,7 @@ jobs:
             --from-literal=ALGORITHM=HS256 \
             --from-literal=ACCESS_TOKEN_EXPIRE_MINUTES=60
           
-          # 2. Patch Manifests to use Local Test Images
+          # Patch Manifests to use Local Test Images
           sed -i 's|image: .*taskflow-api.*|image: taskflow-api:test|g' k8s/apps/api.yaml
           sed -i 's|image: .*taskflow-worker.*|image: taskflow-worker:test|g' k8s/apps/worker.yaml
           sed -i 's|image: .*taskflow-queue-manager.*|image: taskflow-queue-manager:test|g' k8s/apps/queue-manager.yaml
@@ -136,13 +136,13 @@ jobs:
           sed -i 's|imagePullPolicy: Always|imagePullPolicy: Never|g' k8s/apps/*.yaml
           sed -i 's|imagePullPolicy: IfNotPresent|imagePullPolicy: Never|g' k8s/apps/*.yaml
           
-          # 3. Deploy Ephemeral Redis
+          # Ephemeral Redis
           kubectl run redis-high --image=redis:alpine --labels=app=redis-high --port=6379 -n taskflow
           kubectl expose pod redis-high --name=redis-high --port=6379 -n taskflow
           kubectl run redis-low --image=redis:alpine --labels=app=redis-low --port=6379 -n taskflow
           kubectl expose pod redis-low --name=redis-low --port=6379 -n taskflow
 
-          # 4. Apply Configs & Apps
+          # Apply
           kubectl apply -f k8s/02-configmaps.yaml
           kubectl apply -f k8s/infrastructure/
           kubectl apply -f k8s/apps/
@@ -206,9 +206,9 @@ jobs:
           tags: |
             ${{ secrets.DOCKER_USERNAME }}/${{ matrix.image_name }}:${{ matrix.tag_prefix }}-latest
             ${{ secrets.DOCKER_USERNAME }}/${{ matrix.image_name }}:${{ matrix.tag_prefix }}-${{ github.sha }}
-          # This pulls the layers built in Job 1, skipping rebuild!
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          # ⚡ CACHING: Re-use the scope from Job 1 to hit the cache instantly
+          cache-from: type=gha,scope=${{ matrix.service }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.service }}
 
   # JOB 4: DEPLOY TO GHCR
   deploy-ghcr:
@@ -255,6 +255,6 @@ jobs:
           tags: |
             ghcr.io/${{ env.REPO_OWNER }}/${{ matrix.ghcr_repo }}:latest
             ghcr.io/${{ env.REPO_OWNER }}/${{ matrix.ghcr_repo }}:${{ github.sha }}
-          # This also pulls the layers built in Job 1!
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          # ⚡ CACHING: Re-use the scope from Job 1
+          cache-from: type=gha,scope=${{ matrix.service }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.service }}
