@@ -1,6 +1,6 @@
-# we use a matrix method to run building the docker containers in parallel to build faster 
+# # we use a matrix method to run building the docker containers in parallel to build faster 
 
-name: effecient-CI/CD Pipeline 
+name: CI/CD Pipeline
 
 on:
   push:
@@ -17,7 +17,7 @@ permissions:
   contents: read
 
 jobs:
-  # JOB 1: BUILD IMAGES FOR CI (PARALLEL) using matrix 
+  # JOB 1: BUILD IMAGES FOR CI (PARALLEL)
   build-ci-images:
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -42,15 +42,8 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Cache Docker Layers
-        uses: actions/cache@v3
-        with:
-          path: /tmp/.buildx-cache
-          key: ${{ runner.os }}-buildx-${{ matrix.service }}-${{ github.sha }}
-          restore-keys: |
-            ${{ runner.os }}-buildx-${{ matrix.service }}-
-
-      - name: Build and Export
+      # We save the layers to GitHub Cache so Deploy jobs can reuse them later
+      - name: Build and Export for CI
         uses: docker/build-push-action@v5
         with:
           context: .
@@ -101,16 +94,12 @@ jobs:
           name: image-queue-manager
           path: /tmp
 
-
-      - name: Load Images into Docker & Kind
+      # FAST LOAD: Bypasses Docker daemon and loads directly into Kind
+      - name: Load Images into Kind (Direct)
         run: |
-          docker load --input /tmp/api.tar
-          docker load --input /tmp/worker.tar
-          docker load --input /tmp/queue-manager.tar
-          
-          kind load docker-image taskflow-api:test --name taskflow-ci
-          kind load docker-image taskflow-worker:test --name taskflow-ci
-          kind load docker-image taskflow-queue-manager:test --name taskflow-ci
+          kind load image-archive /tmp/api.tar --name taskflow-ci
+          kind load image-archive /tmp/worker.tar --name taskflow-ci
+          kind load image-archive /tmp/queue-manager.tar --name taskflow-ci
 
       - name: Setup Python
         uses: actions/setup-python@v4
@@ -173,8 +162,8 @@ jobs:
           python test.py
           python verify_test.py
 
-  # JOB 3: DEPLOY TO PROD (PARALLEL & MULTI-REGISTRY)
-  deploy-images:
+  # JOB 3: DEPLOY TO DOCKER HUB
+  deploy-dockerhub:
     needs: end-to-end-test
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
@@ -184,19 +173,16 @@ jobs:
         include:
           - service: api
             file: api/Dockerfile
-            hub_repo: taskflow
-            ghcr_repo: taskflow-api
-            tag_suffix: api
+            image_name: taskflow
+            tag_prefix: api
           - service: worker
             file: worker/Dockerfile
-            hub_repo: taskflow
-            ghcr_repo: taskflow-worker
-            tag_suffix: worker
+            image_name: taskflow
+            tag_prefix: worker
           - service: queue-manager
             file: core/Dockerfile
-            hub_repo: taskflow
-            ghcr_repo: taskflow-queue-manager
-            tag_suffix: queue-manager
+            image_name: taskflow
+            tag_prefix: queue-manager
 
     steps:
       - name: Checkout Code
@@ -211,6 +197,45 @@ jobs:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
+      - name: Build and Push to Docker Hub
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ${{ matrix.file }}
+          push: true
+          tags: |
+            ${{ secrets.DOCKER_USERNAME }}/${{ matrix.image_name }}:${{ matrix.tag_prefix }}-latest
+            ${{ secrets.DOCKER_USERNAME }}/${{ matrix.image_name }}:${{ matrix.tag_prefix }}-${{ github.sha }}
+          # This pulls the layers built in Job 1, skipping rebuild!
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # JOB 4: DEPLOY TO GHCR
+  deploy-ghcr:
+    needs: end-to-end-test
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        service: [api, worker, queue-manager]
+        include:
+          - service: api
+            file: api/Dockerfile
+            ghcr_repo: taskflow-api
+          - service: worker
+            file: worker/Dockerfile
+            ghcr_repo: taskflow-worker
+          - service: queue-manager
+            file: core/Dockerfile
+            ghcr_repo: taskflow-queue-manager
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
       - name: Login to GHCR
         uses: docker/login-action@v3
         with:
@@ -221,17 +246,15 @@ jobs:
       - name: Lowercase Repo Owner
         run: echo "REPO_OWNER=${GITHUB_REPOSITORY_OWNER,,}" >>${GITHUB_ENV}
 
-      - name: Build and Push (Multi-Registry)
+      - name: Build and Push to GHCR
         uses: docker/build-push-action@v5
         with:
           context: .
           file: ${{ matrix.file }}
           push: true
-          # Pushes to BOTH Docker Hub and GHCR in one step
           tags: |
-            ${{ secrets.DOCKER_USERNAME }}/${{ matrix.hub_repo }}:${{ matrix.tag_suffix }}-latest
-            ${{ secrets.DOCKER_USERNAME }}/${{ matrix.hub_repo }}:${{ matrix.tag_suffix }}-${{ github.sha }}
             ghcr.io/${{ env.REPO_OWNER }}/${{ matrix.ghcr_repo }}:latest
             ghcr.io/${{ env.REPO_OWNER }}/${{ matrix.ghcr_repo }}:${{ github.sha }}
+          # This also pulls the layers built in Job 1!
           cache-from: type=gha
           cache-to: type=gha,mode=max
