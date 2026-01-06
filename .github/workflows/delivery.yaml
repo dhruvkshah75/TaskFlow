@@ -159,8 +159,8 @@ jobs:
           kubectl port-forward -n taskflow svc/taskflow-pgbouncer 6432:6432 &
           kubectl port-forward -n taskflow svc/taskflow-api 8080:80 &
           sleep 10
-          python test.py
-          python verify_test.py
+          python tests/test.py
+          python tests/verify_test.py
 
   # JOB 3: DEPLOY TO DOCKER HUB
   deploy-dockerhub:

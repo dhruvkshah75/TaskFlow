@@ -117,7 +117,7 @@ jobs:
           sleep 10
           
           echo "Sending 200 tasks..."
-          python stress-test.py
+          python tests/stress-test.py
           
           echo "verifying data..."
-          python verify_jobs.py
+          python tests/verify_jobs.py
