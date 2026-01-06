@@ -1,10 +1,10 @@
 # # we use a matrix method to run building the docker containers in parallel to build faster 
 
-name: CI/CD Pipeline
+name: Parallel CI & Multi-Registry Deploy
 
 on:
   push:
-    branches: [ "main", "feat/15-ci-cd-pipeline" ]
+    branches: [ "**" ]
     paths:
       - "**"
       - "!README.md"
