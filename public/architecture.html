@@ -114,6 +114,7 @@
                         %% --- APP LAYER ---
                         subgraph "Application Layer"
                             API[("<b>TaskFlow API</b><br>(2 Replicas)")]:::k8s
+                            QueueManager[("<b>Queue Manager</b><br>(1 Replica)")]:::k8s
                             Worker[("<b>Worker</b><br>(1-20 Replicas)")]:::k8s
                         end
             
@@ -124,9 +125,13 @@
 
                         %% API -> Redis Low
                         API -.-> |"Cache / Rate Limit"| RedisLow
-                        
+
                         %% API -> Redis
-                        API --> |"PUSH task"| RedisHigh
+                        API --> |"PUSH task"| PgBouncer
+
+                        %% Queue Manager 
+                        QueueManager -->|Tasks QUEUED| PgBouncer
+                        QueueManager -->|PUSH Task| RedisHigh
                         
                         %% KEDA -> Redis (Monitoring)
                         KEDA -.-> |"Checks Queue Depth"| RedisHigh
@@ -147,8 +152,9 @@
                     end
             
                     %% Link Styling
-                    linkStyle 0,1,5,6,7 stroke-width:2px,fill:none,stroke:green;
-                    linkStyle 2,3 stroke-width:2px,fill:none,stroke:orange,stroke-dasharray: 5 5;
+                    linkStyle 0,2,3,4 stroke-width:2px,fill:none,stroke:green
+                    linkStyle 1,5,6 stroke-width:2px,fill:none,stroke:orange,stroke-dasharray:5 5
+                    linkStyle 7 stroke-width:2px,fill:none,stroke:#2563eb
                 </div>
             </div>
 
