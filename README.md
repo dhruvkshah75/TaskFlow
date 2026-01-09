@@ -29,20 +29,18 @@ The system leverages **FastAPI** for high-performance task submission and monito
 
 **[taskflow-io.vercel.app](https://taskflow-io.vercel.app/)** - Interactive demonstration with project overview, architecture, and demo videos
 
-<table style="width: 100%;">
-  <tr>
-    <td style="width: 50%; vertical-align: top;">
-      <img src="./assets/illustration.png" 
-           style="width: 100%; aspect-ratio: 16 / 9; object-fit: cover;" 
-           alt="TaskFlow Scaling Proof">
-    </td>
-    <td style="width: 50%; vertical-align: top;">
-      <img src="assets/output_high_res.gif" 
-           style="width: 100%; aspect-ratio: 16 / 9; object-fit: cover;" 
-           alt="TaskFlow Auto-Scaling Demo">
-    </td>
-  </tr>
-</table>
+
+  <td style="width: 50%; vertical-align: top;">
+    <img src="./assets/illustration.png" 
+          style="width: 60%; object-fit: cover;" 
+          alt="TaskFlow Scaling Proof">
+  </td>
+  <td style="width: 50%; vertical-align: top;">
+    <img src="assets/output_high_res.gif" 
+          style="width: 100%; aspect-ratio: 16 / 9; object-fit: cover;" 
+          alt="TaskFlow Auto-Scaling Demo">
+  </td>
+
 
 ## Quick Deployment (Docker)
 
