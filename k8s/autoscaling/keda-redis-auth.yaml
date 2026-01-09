@@ -1,0 +1,11 @@
+# this file connects to the redis by using the redis password from secrets 
+apiVersion: keda.sh/v1alpha1
+kind: TriggerAuthentication
+metadata:
+  name: keda-redis-auth
+  namespace: taskflow
+spec:
+  secretTargetRef:
+  - parameter: password
+    name: taskflow-redis-secret   # Matches your existing Secret name
+    key: REDIS_PASSWORD           # Matches the key inside that Secret
