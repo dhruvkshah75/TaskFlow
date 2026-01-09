@@ -47,10 +47,11 @@ spec:
             value: "postgresql://$(POSTGRES_USER):$(POSTGRES_PASSWORD)@$(POSTGRES_HOST):$(POSTGRES_PORT)/$(POSTGRES_DB)"
           
           # Resource Limits (CRITICAL FOR HPA)
+          # this allows 20 workers to run 
           resources:
             requests:
-              memory: "128Mi"
-              cpu: "100m"
+              memory: "64Mi"   # Was 128Mi -> Now 64Mi (Half the size)
+              cpu: "50m"       # Was 100m -> Now 0.05 CPU
             limits:
-              memory: "1Gi"   # Allow up to 1GB per worker
-              cpu: "1000m"    # Allow up to 1 full CPU core
+              memory: "256Mi"  # Was 1Gi -> Now capped at 256Mi
+              cpu: "500m"      # Was 1000m -> Now capped at 0.5 CPU
