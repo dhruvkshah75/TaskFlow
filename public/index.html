@@ -60,14 +60,16 @@
             
             <!-- Live Demo GIF -->
             <h3 class="demo-heading">Live Demo</h3>
+            <div class="demo-logos">
+                <img src="https://www.docker.com/wp-content/uploads/2022/03/Moby-logo.png" alt="Docker" class="demo-logo">
+                <img src="https://raw.githubusercontent.com/kubernetes/kubernetes/master/logo/logo.svg" alt="Kubernetes" class="demo-logo demo-logo-k8s">
+                <img src="https://www.postgresql.org/media/img/about/press/elephant.png" alt="PostgreSQL" class="demo-logo">
+                <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/redis/redis-original.svg" alt="Redis" class="demo-logo demo-logo-redis">
+            </div>
             <div class="demo-container">
                 <img src="assets/output_high_res.gif" alt="TaskFlow Demo" class="demo-gif">
             </div>
             
-            <!-- Architecture Illustration -->
-            <div class="demo-container demo-section-spacing">
-                <img src="assets/illustration.png" alt="TaskFlow Architecture" class="demo-img">
-            </div>
         </div>
     </section>
 
@@ -87,7 +89,9 @@
                     <p>Built on FastAPI for lightning-fast task submission and monitoring with async capabilities</p>
                 </div>
                 <div class="feature-card">
-                    <div class="feature-icon">🔒</div>
+                    <div class="feature-icon-logo">
+                        <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/redis/redis-original.svg" alt="Redis" class="feature-logo-redis">
+                    </div>
                     <h3>Reliable Scheduling</h3>
                     <p>Redis-based locking prevents race conditions and ensures reliable task distribution</p>
                 </div>
@@ -97,12 +101,17 @@
                     <p>Complete audit trail of task states via REST endpoints for full visibility</p>
                 </div>
                 <div class="feature-card">
-                    <div class="feature-icon">🐳</div>
+                    <div class="feature-icon-logo">
+                        <img src="https://www.docker.com/wp-content/uploads/2022/03/Moby-logo.png" alt="Docker" class="feature-logo">
+                        <img src="https://raw.githubusercontent.com/kubernetes/kubernetes/master/logo/logo.svg" alt="Kubernetes" class="feature-logo-k8s">
+                    </div>
                     <h3>Production Ready</h3>
                     <p>Docker Compose and Kubernetes deployment configurations included</p>
                 </div>
                 <div class="feature-card">
-                    <div class="feature-icon">💾</div>
+                    <div class="feature-icon-logo">
+                        <img src="https://www.postgresql.org/media/img/about/press/elephant.png" alt="PostgreSQL" class="feature-logo">
+                    </div>
                     <h3>Persistent Storage</h3>
                     <p>PostgreSQL ensures durable persistence of task history and results</p>
                 </div>
@@ -116,14 +125,20 @@
             <h2 class="section-title">Quick Start</h2>
             <div class="quickstart-grid">
                 <div class="quickstart-card">
-                    <h3>🐳 Docker Deployment</h3>
+                    <h3 class="quickstart-title">
+                        <img src="https://www.docker.com/wp-content/uploads/2022/03/Moby-logo.png" alt="Docker" class="quickstart-logo">
+                        Docker Deployment
+                    </h3>
                     <div class="code-block">
                         <code>curl -sSL https://raw.githubusercontent.com/dhruvkshah75/TaskFlow/main/install.sh | bash</code>
                     </div>
                     <p>One-line installation with Docker Compose</p>
                 </div>
                 <div class="quickstart-card">
-                    <h3>☸️ Kubernetes Deployment</h3>
+                    <h3 class="quickstart-title">
+                        <img src="https://raw.githubusercontent.com/kubernetes/kubernetes/master/logo/logo.svg" alt="Kubernetes" class="quickstart-logo">
+                        Kubernetes Deployment
+                    </h3>
                     <div class="code-block">
                         <code>kubectl create namespace taskflow<br>kubectl apply -f k8s/</code>
                     </div>
@@ -143,11 +158,11 @@
                     <span>FastAPI</span>
                 </div>
                 <div class="tech-item">
-                    <img src="https://www.python.org/static/community_logos/python-logo.png" alt="Python" class="tech-logo">
+                    <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/python/python-original.svg" alt="Python" class="tech-logo">
                     <span>Python 3.11+</span>
                 </div>
                 <div class="tech-item">
-                    <img src="https://redis.io/wp-content/uploads/2024/04/Logotype.svg" alt="Redis" class="tech-logo redis-logo">
+                    <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/redis/redis-original.svg" alt="Redis" class="tech-logo redis-logo">
                     <span>Redis</span>
                 </div>
                 <div class="tech-item">

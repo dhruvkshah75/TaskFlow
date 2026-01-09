@@ -312,9 +312,37 @@ body::before {
     font-size: 2.5rem;
     font-weight: 800;
     color: var(--text-primary);
-    text-align: left;
+    text-align: center;
     margin-bottom: 2rem;
     letter-spacing: -0.02em;
+}
+
+.demo-logos {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 3rem;
+    margin-bottom: 3rem;
+    flex-wrap: wrap;
+}
+
+.demo-logo {
+    height: 60px;
+    width: auto;
+    object-fit: contain;
+    transition: all 0.3s ease;
+}
+
+.demo-logo:hover {
+    transform: scale(1.1);
+}
+
+.demo-logo-redis {
+    height: 60px;
+}
+
+.demo-logo-k8s {
+    height: 65px;
 }
 
 .demo-container:hover {
@@ -382,6 +410,29 @@ body::before {
     margin-bottom: 1rem;
 }
 
+.feature-icon-logo {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 1rem;
+    min-height: 60px;
+}
+
+.feature-logo {
+    height: 50px;
+    width: auto;
+    object-fit: contain;
+}
+
+.feature-logo-redis {
+    height: 50px;
+}
+
+.feature-logo-k8s {
+    height: 45px;
+}
+
 .feature-card h3 {
     font-size: 1.5rem;
     margin-bottom: 1rem;
@@ -424,6 +475,18 @@ body::before {
     font-size: 1.5rem;
     margin-bottom: 1.5rem;
     color: var(--text-primary);
+}
+
+.quickstart-title {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.quickstart-logo {
+    height: 35px;
+    width: auto;
+    object-fit: contain;
 }
 
 .code-block {
@@ -489,7 +552,7 @@ body::before {
 }
 
 .tech-logo.redis-logo {
-    filter: brightness(0) invert(1);
+    height: 50px;
 }
 
 .tech-logo.k8s-logo {
