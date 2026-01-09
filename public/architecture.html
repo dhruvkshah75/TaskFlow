@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>System Architecture - TaskFlow</title>
+    <link rel="stylesheet" href="architecture.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    
+    <style>
+
+        /* Title inside the yellow box needs to be dark again */
+        .section-title {
+            margin-bottom: 2rem;
+            color: #1f2937 !important; /* Dark Gray Text */
+        }
+
+        /* 2. Grid Fixes */
+        .fault-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); 
+            gap: 2rem;
+            margin-top: 2rem;
+        }
+
+        .component-logo-img {
+            width: 48px;
+            height: 48px;
+            object-fit: contain;
+        }
+
+        .component-header {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+    </style>
+
+</head>
+<body>
+    <nav class="navbar">
+        <div class="container nav-container">
+            <div class="logo">
+                <span class="logo-icon">⚡</span>
+                <span class="logo-text">TaskFlow</span>
+            </div>
+            <div class="nav-links">
+                <a href="index.html">Home</a>
+                <a href="architecture.html" class="active">Architecture</a>
+                <a href="https://github.com/dhruvkshah75/TaskFlow" target="_blank" class="github-link">
+                    <svg class="github-icon" viewBox="0 0 16 16" fill="currentColor">
+                        <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/>
+                    </svg>
+                    GitHub
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <section class="hero">
+        <div class="container">
+            <h1 class="hero-title">System Architecture</h1>
+            <p class="hero-subtitle">Deep dive into TaskFlow's distributed, event-driven architecture</p>
+        </div>
+    </section>
+
+    <section class="architecture-section">
+        <div class="container">
+            <div class="intro-card">
+                <h2>Overview</h2>
+                <p>TaskFlow implements a <strong>Producer-Consumer pattern</strong> with event-driven autoscaling, fault tolerance, and dual-priority task queues. The system is built on Kubernetes with KEDA for dynamic scaling based on queue depth.</p>
+            </div>
+
+            <div class="diagram-section" style="background: #ffffff; padding: 2rem; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); margin: 2rem 0; text-align: center;">
+                <h2 class="section-title" style="margin-bottom: 2rem; color: #1f2937;">System Architecture Flow</h2>
+                
+                <div class="mermaid">
+                    graph TD
+                    
+                    %% --- STYLING ---
+                    classDef k8s fill:#326ce5,stroke:#fff,stroke-width:2px,color:#fff;
+                    classDef db fill:#ffffff,stroke:#336791,stroke-width:2px,color:#333;
+                    classDef redis fill:#ffffff,stroke:#d82c20,stroke-width:2px,color:#333;
+                    classDef component fill:#e1f5fe,stroke:#333,stroke-width:1px;
+                    classDef plain fill:#fff,stroke:#333,stroke-width:1px;
+            
+                    subgraph "Cluster: TaskFlow Namespace"
+                        direction TB
+            
+                        %% --- AUTOSCALING ---
+                        subgraph "Autoscaling Logic"
+                            %% Using Kubernetes Logo for KEDA
+                            KEDA("<img src='https://upload.wikimedia.org/wikipedia/commons/3/39/Kubernetes_logo_without_workmark.svg' width='40' /><br><b>KEDA Operator</b>"):::plain
+                        end
+            
+                        %% --- DATA LAYER ---
+                        subgraph "Data Layer"
+                            %% Redis Logo
+                            RedisHigh("<img src='https://cdn.jsdelivr.net/gh/devicons/devicon/icons/redis/redis-original.svg' width='40' /><br><b>Redis (High)</b>"):::redis
+                            
+                            %% Redis Logo
+                            RedisLow("<img src='https://cdn.jsdelivr.net/gh/devicons/devicon/icons/redis/redis-original.svg' width='40' /><br><b>Redis (Low)</b>"):::redis
+                            
+                            %% Postgres Logo
+                            Postgres("<img src='https://cdn.jsdelivr.net/gh/devicons/devicon/icons/postgresql/postgresql-original.svg' width='40' /><br><b>PostgreSQL</b>"):::db
+                            
+                            %% PgBouncer
+                            PgBouncer("<img src='https://cdn.jsdelivr.net/gh/devicons/devicon/icons/postgresql/postgresql-plain.svg' width='40' /><br><b>PgBouncer</b>"):::db
+                        end
+            
+                        %% --- APP LAYER ---
+                        subgraph "Application Layer"
+                            API[("<b>TaskFlow API</b><br>(2 Replicas)")]:::k8s
+                            Worker[("<b>Worker</b><br>(1-20 Replicas)")]:::k8s
+                        end
+            
+                        %% --- CONNECTIONS ---
+                        
+                        %% User -> API
+                        User((👤 User)) --> |"POST /tasks"| API
+
+                        %% API -> Redis Low
+                        API -.-> |"Cache / Rate Limit"| RedisLow
+                        
+                        %% API -> Redis
+                        API --> |"PUSH task"| RedisHigh
+                        
+                        %% KEDA -> Redis (Monitoring)
+                        KEDA -.-> |"Checks Queue Depth"| RedisHigh
+                        
+                        %% KEDA -> Worker (Scaling)
+                        KEDA -.-> |"Scales Deployment"| Worker
+                        
+                        %% Worker -> Redis (Fetching)
+                        Worker --> |"POP Task"| RedisHigh
+                        
+                        %% Worker/API -> PgBouncer
+                        Worker --> |"Connection Pool"| PgBouncer
+                        API --> |"GET /status"| PgBouncer
+                        
+                        %% PgBouncer -> Postgres
+                        PgBouncer --> |"Real Connection"| Postgres
+
+                    end
+            
+                    %% Link Styling
+                    linkStyle 0,1,5,6,7 stroke-width:2px,fill:none,stroke:green;
+                    linkStyle 2,3 stroke-width:2px,fill:none,stroke:orange,stroke-dasharray: 5 5;
+                </div>
+            </div>
+
+            <div class="components-section">
+                <h2 class="section-title">Core Components</h2>
+                <div class="components-grid">
+                    <div class="component-card">
+                        <div class="component-header">
+                            <span class="component-icon">🌐</span>
+                            <h3>API Gateway</h3>
+                        </div>
+                        <div class="component-tech">
+                            <span class="tech-badge">FastAPI</span>
+                            <span class="tech-badge">Python 3.11</span>
+                        </div>
+                        <ul class="component-features">
+                            <li><strong>Authentication:</strong> JWT token validation</li>
+                            <li><strong>Rate Limiting:</strong> Per-user limits via Redis</li>
+                            <li><strong>Task Submission:</strong> Validates & pushes to Redis</li>
+                            <li><strong>Status Queries:</strong> Returns results from DB</li>
+                        </ul>
+                        <div class="component-k8s">
+                            <code>k8s/apps/api.yaml</code> • 2 replicas
+                        </div>
+                    </div>
+
+                    <div class="component-card">
+                        <div class="component-header">
+                            <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/redis/redis-original.svg" class="component-logo-img" alt="Redis Logo">
+                            <h3>Redis Cluster</h3>
+                        </div>
+                        <div class="component-tech">
+                            <span class="tech-badge">Redis 7</span>
+                            <span class="tech-badge">Dual-Priority</span>
+                        </div>
+                        <ul class="component-features">
+                            <li><strong>redis-high:</strong> Queue for critical tasks</li>
+                            <li><strong>redis-low:</strong> Caching, Rate Limits, Bulk tasks</li>
+                            <li><strong>Operations:</strong> RPUSH, BRPOPLPUSH, LLEN</li>
+                            <li><strong>Leader Election:</strong> SET NX PX for locking</li>
+                        </ul>
+                        <div class="component-k8s">
+                            <code>k8s/infrastructure/redis.yaml</code>
+                        </div>
+                    </div>
+
+                    <div class="component-card">
+                        <div class="component-header">
+                            <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/postgresql/postgresql-original.svg" class="component-logo-img" alt="Postgres Logo">
+                            <h3>PostgreSQL + PgBouncer</h3>
+                        </div>
+                        <div class="component-tech">
+                            <span class="tech-badge">PostgreSQL 15</span>
+                            <span class="tech-badge">PgBouncer</span>
+                        </div>
+                        <ul class="component-features">
+                            <li><strong>PgBouncer:</strong> Connection pooling (port 6432)</li>
+                            <li><strong>Purpose:</strong> Multiplexes worker connections</li>
+                            <li><strong>Tables:</strong> Users, Tasks, TaskEvents, ApiKeys</li>
+                            <li><strong>Storage:</strong> 1Gi Persistent Volume</li>
+                        </ul>
+                        <div class="component-k8s">
+                            <code>k8s/infrastructure/postgres.yaml</code>
+                        </div>
+                    </div>
+
+                    <div class="component-card">
+                        <div class="component-header">
+                            <span class="component-icon">🔧</span>
+                            <h3>Worker Pool</h3>
+                        </div>
+                        <div class="component-tech">
+                            <span class="tech-badge">Python 3.11</span>
+                            <span class="tech-badge">AsyncIO</span>
+                        </div>
+                        <ul class="component-features">
+                            <li><strong>Scaling:</strong> 1-20 replicas via KEDA</li>
+                            <li><strong>Atomic Pop:</strong> BRPOPLPUSH to processing queue</li>
+                            <li><strong>Execution:</strong> CPU-intensive business logic</li>
+                            <li><strong>Heartbeat:</strong> Periodic health signals to Redis</li>
+                        </ul>
+                        <div class="component-k8s">
+                            <code>k8s/apps/worker.yaml</code>
+                        </div>
+                    </div>
+
+                    <div class="component-card">
+                        <div class="component-header">
+                            <img src="https://upload.wikimedia.org/wikipedia/commons/3/39/Kubernetes_logo_without_workmark.svg" class="component-logo-img" alt="Kubernetes Logo">
+                            <h3>KEDA Autoscaler</h3>
+                        </div>
+                        <div class="component-tech">
+                            <span class="tech-badge">KEDA 2.10+</span>
+                            <span class="tech-badge">Event-Driven</span>
+                        </div>
+                        <ul class="component-features">
+                            <li><strong>Trigger:</strong> Redis queue length (LLEN)</li>
+                            <li><strong>Formula:</strong> replicas = ceil(queue_length / 10)</li>
+                            <li><strong>Polling:</strong> Every 5 seconds</li>
+                            <li><strong>Cooldown:</strong> 30 seconds before scale-down</li>
+                        </ul>
+                        <div class="component-k8s">
+                            <code>k8s/autoscaling/worker-scaledobject.yaml</code>
+                        </div>
+                    </div>
+
+                    <div class="component-card">
+                        <div class="component-header">
+                            <span class="component-icon">🎯</span>
+                            <h3>Queue Manager</h3>
+                        </div>
+                        <div class="component-tech">
+                            <span class="tech-badge">Python</span>
+                            <span class="tech-badge">Multi-threaded</span>
+                        </div>
+                        <ul class="component-features">
+                            <li><strong>Leader Election:</strong> Redis-based distributed lock</li>
+                            <li><strong>Scheduler:</strong> scheduled_at → Redis (5s interval)</li>
+                            <li><strong>PEL Scanner:</strong> Dead worker recovery (10s)</li>
+                            <li><strong>Reconciliation:</strong> QUEUED tasks sync (30s)</li>
+                        </ul>
+                        <div class="component-k8s">
+                            <code>k8s/apps/queue-manager.yaml</code>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="fault-section">
+                <h2 class="section-title">Fault Tolerance</h2>
+                <div class="fault-grid">
+                    <div class="fault-card">
+                        <h3>Worker Crash</h3>
+                        <div class="fault-detection">
+                            <span class="label">Detection:</span> Missing heartbeat (10s)
+                        </div>
+                        <div class="fault-recovery">
+                            <span class="label">Recovery:</span> PEL Scanner re-queues task
+                        </div>
+                    </div>
+
+                    <div class="fault-card">
+                        <h3>Redis Crash</h3>
+                        <div class="fault-detection">
+                            <span class="label">Detection:</span> Connection error
+                        </div>
+                        <div class="fault-recovery">
+                            <span class="label">Recovery:</span> Queued Reconciliation re-pushes
+                        </div>
+                    </div>
+
+                    <div class="fault-card">
+                        <h3>Database Crash</h3>
+                        <div class="fault-detection">
+                            <span class="label">Detection:</span> Connection pool timeout
+                        </div>
+                        <div class="fault-recovery">
+                            <span class="label">Recovery:</span> Workers retry on next task
+                        </div>
+                    </div>
+
+                    <div class="fault-card">
+                        <h3>Queue Manager Crash</h3>
+                        <div class="fault-detection">
+                            <span class="label">Detection:</span> Lease expiry (10s)
+                        </div>
+                        <div class="fault-recovery">
+                            <span class="label">Recovery:</span> New leader elected via lock
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </section>
+
+    <footer class="footer">
+        <div class="container">
+            <p>&copy; 2026 TaskFlow. Built by <a href="https://github.com/dhruvkshah75" target="_blank">Dhruv Shah</a></p>
+            <div class="footer-links">
+                <a href="https://github.com/dhruvkshah75/TaskFlow" target="_blank">GitHub</a>
+                <a href="https://github.com/dhruvkshah75/TaskFlow/blob/main/README.md" target="_blank">Documentation</a>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        // Navbar scroll effect
+        window.addEventListener('scroll', function() {
+            const navbar = document.querySelector('.navbar');
+            if (window.scrollY > 50) {
+                navbar.classList.add('scrolled');
+            } else {
+                navbar.classList.remove('scrolled');
+            }
+        });
+    </script>
+    
+    <script type="module">
+        import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+        mermaid.initialize({ 
+            startOnLoad: true,
+            securityLevel: 'loose', // Required for <img> tags
+            theme: 'default'
+        });
+    </script>
+</body>
+</html>
