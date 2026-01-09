@@ -1,123 +1,150 @@
-name: Integration Stress Test
+name: Integration Stress Test (Parallel & Cached)
 
 on:
   workflow_dispatch:
-    
 
 jobs:
+  # JOB 1: BUILD ALL IMAGES IN PARALLEL (MATRIX STRATEGY)
+  build-images:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        service: [api, worker, queue-manager]
+        include:
+          # Define specific Dockerfile paths for each service
+          - service: api
+            file: api/Dockerfile
+            tag: taskflow-api:test
+          - service: worker
+            file: worker/Dockerfile
+            tag: taskflow-worker:test
+          - service: queue-manager
+            file: core/Dockerfile   
+            tag: taskflow-queue-manager:test
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and Export Image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ${{ matrix.file }}
+          tags: ${{ matrix.tag }}
+          # Export as a tar file (Artifact) instead of loading to Docker daemon
+          outputs: type=docker,dest=/tmp/${{ matrix.service }}.tar
+          # ⚡ CACHING: Scoped by service so they don't overwrite each other
+          cache-from: type=gha,scope=${{ matrix.service }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.service }}
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: image-${{ matrix.service }}
+          path: /tmp/${{ matrix.service }}.tar
+          retention-days: 1
+
+  # JOB 2: STRESS TEST (RUNS ONLY AFTER ALL BUILDS FINISH)
   end-to-end-test:
+    needs: build-images   # <--- Waits for the parallel jobs to finish
     runs-on: ubuntu-latest
     timeout-minutes: 20
 
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
-      
-      # 1. Setup Docker Buildx (Required for Docker caching)
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      # 2. Setup Python with Caching
-      # We cache the pip directory to speed up dependency installs
-      - name: Setup Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.11'
-      
-      - name: Cache Pip Packages
-        uses: actions/cache@v5
-        with:
-          path: ~/.cache/pip
-          # Key includes runner OS. We don't have a requirements.txt to hash, 
-          # so we use a generic key. It will update if you clear caches manually.
-          key: ${{ runner.os }}-pip-cache
 
       - name: Create K8S Kind Cluster
         uses: helm/kind-action@v1.8.0
         with:
           cluster_name: taskflow-ci
 
-      # 3. Build API Image (With Caching)
-      - name: Build and load API image
-        uses: docker/build-push-action@v5
+      # Download images from the previous parallel jobs
+      - name: Download API Image
+        uses: actions/download-artifact@v4
         with:
-          context: .
-          file: api/Dockerfile
-          tags: taskflow-api:test
-          load: true             # Loads image into Docker daemon so Kind can find it
-          cache-from: type=gha   # Pulls cache from GitHub
-          cache-to: type=gha,mode=max # Pushes new cache to GitHub
+          name: image-api
+          path: /tmp
 
-      # 4. Build Worker Image (With Caching)
-      - name: Build and load Worker image
-        uses: docker/build-push-action@v5
+      - name: Download Worker Image
+        uses: actions/download-artifact@v4
         with:
-          context: .
-          file: worker/Dockerfile
-          tags: taskflow-worker:test
-          load: true
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          name: image-worker
+          path: /tmp
 
+      - name: Download Queue Manager Image
+        uses: actions/download-artifact@v4
+        with:
+          name: image-queue-manager
+          path: /tmp
+
+      # FAST LOAD: Injects tarball directly into Kind (Bypassing Docker Daemon)
       - name: Load Images into Kind
         run: |
-          kind load docker-image taskflow-api:test --name taskflow-ci
-          kind load docker-image taskflow-worker:test --name taskflow-ci
+          kind load image-archive /tmp/api.tar --name taskflow-ci
+          kind load image-archive /tmp/worker.tar --name taskflow-ci
+          kind load image-archive /tmp/queue-manager.tar --name taskflow-ci
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+          cache: 'pip' # ⚡ NEW: Built-in pip caching (cleaner syntax)
 
       - name: Deploy Application
         run: |
           kubectl create namespace taskflow
           
-          # Create secrets dynamically 
-          kubectl create secret generic taskflow-db-secret \
-            --namespace=taskflow \
+          # 1. Create Secrets
+          kubectl create secret generic taskflow-db-secret --namespace=taskflow \
             --from-literal=POSTGRES_DB=taskflow_db \
             --from-literal=POSTGRES_USER=postgres \
             --from-literal=POSTGRES_PASSWORD=password \
             --from-literal=DATABASE_URL=postgresql://postgres:password@taskflow-pgbouncer:6432/taskflow_db
           
-          kubectl create secret generic taskflow-redis-secret \
-            --namespace=taskflow \
+          kubectl create secret generic taskflow-redis-secret --namespace=taskflow \
             --from-literal=REDIS_PASSWORD=test_password \
-            --from-literal=REDIS_HOST_HIGH=redis-high \
-            --from-literal=REDIS_PORT_HIGH=6379 \
-            --from-literal=REDIS_HOST_LOW=redis-low \
-            --from-literal=REDIS_PORT_LOW=6379
+            --from-literal=REDIS_HOST_HIGH=redis-high --from-literal=REDIS_PORT_HIGH=6379 \
+            --from-literal=REDIS_HOST_LOW=redis-low --from-literal=REDIS_PORT_LOW=6379
           
-          kubectl create secret generic taskflow-app-secret \
-            --namespace=taskflow \
-            --from-literal=SECRET_KEY=test_secret_key_for_ci_only \
-            --from-literal=ALGORITHM=HS256 \
-            --from-literal=ACCESS_TOKEN_EXPIRE_MINUTES=60
+          kubectl create secret generic taskflow-app-secret --namespace=taskflow \
+            --from-literal=SECRET_KEY=test_secret_key_for_ci_only --from-literal=ALGORITHM=HS256 --from-literal=ACCESS_TOKEN_EXPIRE_MINUTES=60
           
-          # Updates specifically for the test environment
-          sed -i 's|ghcr.io/dhruvkshah75/taskflow-api:latest|taskflow-api:test|g' k8s/apps/api.yaml
-          sed -i 's|ghcr.io/dhruvkshah75/taskflow-worker:latest|taskflow-worker:test|g' k8s/apps/worker.yaml
-          # Force Kubernetes to use the local loaded images
+          # 2. Patch Manifests to use Local Test Images
+          sed -i 's|image: .*taskflow-api.*|image: taskflow-api:test|g' k8s/apps/api.yaml
+          sed -i 's|image: .*taskflow-worker.*|image: taskflow-worker:test|g' k8s/apps/worker.yaml
+          sed -i 's|image: .*taskflow-queue-manager.*|image: taskflow-queue-manager:test|g' k8s/apps/queue-manager.yaml
+          
+          # 3. Force K8s to use local images (Never pull from internet)
           sed -i 's|imagePullPolicy: Always|imagePullPolicy: Never|g' k8s/apps/*.yaml
           sed -i 's|imagePullPolicy: IfNotPresent|imagePullPolicy: Never|g' k8s/apps/*.yaml
           
+          # 4. Apply Everything
           kubectl apply -f k8s/02-configmaps.yaml
           kubectl apply -f k8s/infrastructure/
           kubectl apply -f k8s/apps/
           
-          echo "Waiting for pods to be ready..."
+          echo "Waiting for pods..."
           kubectl wait --namespace taskflow --for=condition=ready pod --selector=app=postgres --timeout=120s
           kubectl wait --namespace taskflow --for=condition=ready pod --selector=app=api --timeout=120s
 
       - name: Install Test Dependencies
-        # This will now be faster because pip checks the cache first
         run: pip install requests psycopg2-binary
 
       - name: Run Stress Test & Verification
         run: |
           kubectl port-forward -n taskflow svc/taskflow-pgbouncer 6432:6432 &
           kubectl port-forward -n taskflow svc/taskflow-api 8080:80 &
-          
           sleep 10
           
-          echo "Sending 200 tasks..."
+          echo "Starting Stress Test..."
           python tests/stress-test.py
           
-          echo "verifying data..."
+          echo "Verifying Jobs..."
           python tests/verify_jobs.py
