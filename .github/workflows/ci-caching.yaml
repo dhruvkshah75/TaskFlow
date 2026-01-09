@@ -13,7 +13,6 @@ jobs:
       matrix:
         service: [api, worker, queue-manager]
         include:
-          # Define specific Dockerfile paths for each service
           - service: api
             file: api/Dockerfile
             tag: taskflow-api:test
@@ -37,9 +36,7 @@ jobs:
           context: .
           file: ${{ matrix.file }}
           tags: ${{ matrix.tag }}
-          # Export as a tar file (Artifact) instead of loading to Docker daemon
           outputs: type=docker,dest=/tmp/${{ matrix.service }}.tar
-          # ⚡ CACHING: Scoped by service so they don't overwrite each other
           cache-from: type=gha,scope=${{ matrix.service }}
           cache-to: type=gha,mode=max,scope=${{ matrix.service }}
 
@@ -50,9 +47,9 @@ jobs:
           path: /tmp/${{ matrix.service }}.tar
           retention-days: 1
 
-  # JOB 2: STRESS TEST (RUNS ONLY AFTER ALL BUILDS FINISH)
+  # JOB 2: STRESS TEST (OPTIMIZED FOR 2 vCPU RUNNER)
   end-to-end-test:
-    needs: build-images   # <--- Waits for the parallel jobs to finish
+    needs: build-images
     runs-on: ubuntu-latest
     timeout-minutes: 20
 
@@ -65,7 +62,13 @@ jobs:
         with:
           cluster_name: taskflow-ci
 
-      # Download images from the previous parallel jobs
+      # ⚡ NEW: Install KEDA (Required for Autoscaling to work)
+      - name: Install KEDA
+        run: |
+          helm repo add kedacore https://kedacore.github.io/charts
+          helm repo update
+          helm install keda kedacore/keda --namespace keda --create-namespace --wait
+
       - name: Download API Image
         uses: actions/download-artifact@v4
         with:
@@ -84,7 +87,6 @@ jobs:
           name: image-queue-manager
           path: /tmp
 
-      # FAST LOAD: Injects tarball directly into Kind (Bypassing Docker Daemon)
       - name: Load Images into Kind
         run: |
           kind load image-archive /tmp/api.tar --name taskflow-ci
@@ -95,7 +97,7 @@ jobs:
         uses: actions/setup-python@v4
         with:
           python-version: '3.11'
-          cache: 'pip' # ⚡ NEW: Built-in pip caching (cleaner syntax)
+          cache: 'pip'
 
       - name: Deploy Application
         run: |
@@ -121,14 +123,21 @@ jobs:
           sed -i 's|image: .*taskflow-worker.*|image: taskflow-worker:test|g' k8s/apps/worker.yaml
           sed -i 's|image: .*taskflow-queue-manager.*|image: taskflow-queue-manager:test|g' k8s/apps/queue-manager.yaml
           
-          # 3. Force K8s to use local images (Never pull from internet)
+          # 3. Force K8s to use local images
           sed -i 's|imagePullPolicy: Always|imagePullPolicy: Never|g' k8s/apps/*.yaml
           sed -i 's|imagePullPolicy: IfNotPresent|imagePullPolicy: Never|g' k8s/apps/*.yaml
           
-          # 4. Apply Everything
+          # 4. Apply Infrastructure & Apps
           kubectl apply -f k8s/02-configmaps.yaml
           kubectl apply -f k8s/infrastructure/
           kubectl apply -f k8s/apps/
+
+          # This applies the ScaledObject we created (worker-scaledobject.yaml)
+          kubectl apply -f k8s/autoscaling/
+
+          # This limits the max workers to 5 ONLY during CI to prevent CPU freezing
+          echo "Patching ScaledObject to limit max replicas in CI..."
+          kubectl patch scaledobject worker-redis-scaler -n taskflow --type='merge' -p '{"spec": {"maxReplicaCount": 5}}'
           
           echo "Waiting for pods..."
           kubectl wait --namespace taskflow --for=condition=ready pod --selector=app=postgres --timeout=120s
