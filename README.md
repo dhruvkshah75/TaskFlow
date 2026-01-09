@@ -6,7 +6,7 @@
 [![Python](https://img.shields.io/badge/python-3.11+-blue.svg?style=flat-square&logo=python&logoColor=white)](https://www.python.org/)
 [![Redis](https://img.shields.io/badge/redis-%23DD0031.svg?style=flat-square&logo=redis&logoColor=white)](https://redis.io/)
 [![PostgreSQL](https://img.shields.io/badge/postgresql-%23316192.svg?style=flat-square&logo=postgresql&logoColor=white)](https://www.postgresql.org/)
-[![CI/CD](https://img.shields.io/badge/CI%2FCD-Automated-brightgreen?style=flat-square&logo=github-actions)](https://github.com/dhruvkshah75/TaskFlow/actions)
+[![CI/CD](https://img.shields.io/badge/CI%2FCD-Automated-green?style=flat-square&logo=github-actions)](https://github.com/dhruvkshah75/TaskFlow/actions)
 
 ## Overview
 
@@ -27,7 +27,7 @@ The system leverages **FastAPI** for high-performance task submission and monito
 
 ## See TaskFlow in Action
 
-**[Live Showcase Website](https://taskflow-io.vercel.app/)** - Interactive demonstration with project overview, architecture, and demo videos
+**[taskflow-io.vercel.app](https://taskflow-io.vercel.app/)** - Interactive demonstration with project overview, architecture, and demo videos
 
 <table style="width: 100%;">
   <tr>
@@ -37,16 +37,12 @@ The system leverages **FastAPI** for high-performance task submission and monito
            alt="TaskFlow Scaling Proof">
     </td>
     <td style="width: 50%; vertical-align: top;">
-      <img src="./assets/demo.gif" 
+      <img src="assets/output_high_res.gif" 
            style="width: 100%; aspect-ratio: 16 / 9; object-fit: cover;" 
-           alt="System Demo">
+           alt="TaskFlow Auto-Scaling Demo">
     </td>
   </tr>
 </table>
-
-## Live Demo
-
-<img src="assets/output_high_res.gif" width="100%" alt="TaskFlow Auto-Scaling Demo">
 
 ## Quick Deployment (Docker)
 
@@ -105,6 +101,7 @@ python verify_jobs.py
 View CI/CD workflows in `.github/workflows/`:
 - `ci.yaml` - Standard integration tests
 - `ci-caching.yaml` - Optimized workflow with Docker and pip caching
+- `delivery.yaml` - Complete CI/CD pipeline with parrallel jobs for building docker images and deploying to docker hub and ghcr registry and end-to-end testing
 
 -----
 
@@ -177,24 +174,13 @@ kubectl create secret generic taskflow-app-secret \
   --dry-run=client -o yaml >> secrets.yaml
 
 
-# 1. Create Namespace & Configs
-kubectl create namespace taskflow
-kubectl apply -f k8s/secrets.yaml
-kubectl apply -f k8s/configmap.yaml
+# Apply the kubernetes manifests 
+kubectl apply -f k8s/ --recursive
 
-# 2. Deploy Infrastructure (Postgres & Redis)
-kubectl apply -f k8s/postgres.yaml
-kubectl apply -f k8s/redis.yaml
-
-# 3. Deploy Application (API, Worker, Queue Manager)
-kubectl apply -f k8s/api.yaml
-kubectl apply -f k8s/worker.yaml
-kubectl apply -f k8s/queue-manager.yaml
-
-# 4. Verify Pods
+# Verify Pods
 kubectl get pods -n taskflow -w
 
-# 5. For port forwarding 
+# For port forwarding 
 kubectl port-forward -n taskflow svc/taskflow-api 8080:80
 ```
 
@@ -203,7 +189,14 @@ kubectl port-forward -n taskflow svc/taskflow-api 8080:80
 If using **Minikube**, you need to tunnel the service to access it:
 
 ```bash
+# start the minikube service 
+minikube start
+
 minikube tunnel
+
+# for port forwarding 
+kubectl port-forward -n taskflow svc/taskflow-api 8080:80
+
 # Open http://localhost:8000/docs in your browser
 ```
 
@@ -247,59 +240,49 @@ python -m worker.main
 
 -----
 
-## Architecture
-
-**TaskFlow** implements a distributed microservices architecture optimized for reliability and scalability:
-
-- **API Service:** FastAPI-based REST endpoints for task submission, status monitoring, and queue management
-- **Queue Manager:** Intelligent task distributor with priority queue support (high/low priority)
-- **Workers:** Auto-scaling Python workers with concurrent task execution
-- **Redis (Dual Queues):** Separate high and low priority queues for task prioritization
-- **PostgreSQL + PgBouncer:** Connection pooling for efficient database access and task persistence
-- **Kubernetes HPA:** Automatic horizontal scaling based on queue depth and CPU metrics
-
-### **Key Features:**
-- **Priority Queuing:** Separate Redis instances for high and low priority tasks
-- **Connection Pooling:** PgBouncer reduces PostgreSQL connection overhead
-- **Fault Tolerance:** Worker pods automatically restart on failure
-- **Observable:** Built-in health checks and status endpoints
-
 ## Repository Structure
 
 ```
 TaskFlow/
+├── .github/workflows/           # CI/CD Pipelines
+│       ├── ci.yaml                  # Standard integration tests
+|       ├── delivery.yaml            # complete ci/cd pipeline 
+│       └── ci-caching.yaml          # Optimized builds with caching
 ├── Deployment
 │   ├── docker-compose.prod.yml      # Production Docker Compose
-│   ├── k8s/                         # Kubernetes Manifests
-│   │   ├── apps/                    # API, Worker, Queue Manager
-│   │   ├── infrastructure/          # Redis, Postgres, PgBouncer
-│   │   ├── 02-configmaps.yaml       # Application configuration
-│   │   └── secrets.yaml.example     # Secret templates (gitignored)
-│   └── .github/workflows/           # CI/CD Pipelines
-│       ├── ci.yaml                  # Standard integration tests
-│       └── ci-caching.yaml          # Optimized builds with caching
+│   └── k8s/                         # Kubernetes Manifests
+│       ├── apps/                    # API, Worker, Queue Manager
+│       ├── infrastructure/          # Redis, Postgres, PgBouncer
+|       ├── autoscaling/
+│       ├── 02-configmaps.yaml       # Application configuration
+│       └── secrets.yaml.example     # Secret templates (gitignored)
+│   
 │
 ├── API Service
 │   └── api/                         # FastAPI application
 │       ├── routers/                 # REST endpoints
-│       └── main.py                  # Application entry point
+|       ├── main.py                  # Application entry point
+│       └── Dockerfile 
 │
 ├── Core Services
 │   └── core/                        # Shared utilities
 │       ├── database.py              # PostgreSQL connection
 │       ├── redis_client.py          # Redis client wrapper
-│       └── config.py                # Environment configuration
+|       ├── queue_manager.py         # The queue handling file 
+|       ├── config.py                # Environment configuration
+│       └── Dockerfile
 │
 ├── Worker Service
 │   └── worker/                      # Task execution engine
 │       ├── main.py                  # Worker process
-│       └── tasks.py                 # Task handlers
+|       ├── heartbeat.py             # sends the heartbeat of the worker periodically
+│       └── tasks.py                 # Dummy Tasks 
 │
-├── Database
-│   └── alembic/                     # Database migrations
-│
-└── public/                      # Project website (Vercel)
+├── alembic/                       # Database migrations
+│   
+└── public/                        # Project website (Vercel)
 │     ├── index.html               # Interactive demo page
+|     ├── architecture.html        # page to demonstrate the system architecture 
 │     └── assets/                  # Demo GIFs and illustrations
 │
 ├── stress-test.py               # Load testing (200 tasks)
@@ -334,17 +317,6 @@ HEARTBEAT_INTERVAL_SECONDS=30
 
 ---
 
-## Recent Updates
-
-### Latest Features (Dec 2024)
-- **CI/CD Automation**: Automated Kubernetes deployment and stress testing on every commit
-- **Performance Optimization**: Docker layer caching reduces build time by ~50%
-- **Live Showcase**: Deployed interactive website at [taskflow-io.vercel.app](https://taskflow-io.vercel.app/)
-- **Enhanced Documentation**: Added Kubernetes secrets generation commands and deployment guides
-- **Stress Testing**: Automated validation with 200+ concurrent task submissions
-- **Smart CI Triggers**: Skip CI on documentation-only changes for faster iterations
-
----
 
 ## Contributing
 
