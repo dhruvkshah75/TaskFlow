@@ -15,11 +15,12 @@
 The system leverages **FastAPI** for high-performance task submission and monitoring, **Redis** for efficient message brokering and state management, and **PostgreSQL** for durable persistence of task history and results. By implementing the "Competing Consumers" pattern, TaskFlow ensures load balancing and fault tolerance—if one worker fails, others seamlessly pick up the load.
 
 **Key Capabilities:**
+* **One-Command Deployment:** Automated Makefile system deploys the full Kubernetes stack with `make run`
 * **Distributed Processing:** Horizontally scalable worker nodes process tasks in parallel
 * **Reliable Scheduling:** Intelligent task distribution with Redis-based locking to prevent race conditions
 * **Production Ready:** Docker Compose and Kubernetes deployments with automated CI/CD pipelines
 * **Persistent & Observable:** Complete audit trail of task states (Queued → Processing → Completed/Failed) via REST endpoints
-* **Auto-Scaling:** Kubernetes HPA (Horizontal Pod Autoscaler) support for dynamic worker scaling based on queue depth
+* **Auto-Scaling:** KEDA-powered autoscaling based on Redis queue depth (0 to 50+ workers dynamically)
 * **Continuous Integration:** Automated end-to-end stress testing with 200+ concurrent tasks validation
 * **Interactive Showcase:** Live demo website with project overview and system architecture
 
@@ -89,122 +90,152 @@ TaskFlow includes automated continuous integration with comprehensive end-to-end
 
 ### **Run Tests Locally**
 ```bash
-# Submit 200 concurrent tasks to stress test the system
-python stress-test.py
+# Using Makefile (recommended)
+make stress     # Submit 200 concurrent tasks
 
-# Verify all tasks were processed correctly
-python verify_jobs.py
+# Or directly with Python
+python scripts/stress-test.py
 ```
 
 View CI/CD workflows in `.github/workflows/`:
 - `ci.yaml` - Standard integration tests
 - `ci-caching.yaml` - Optimized workflow with Docker and pip caching
-- `delivery.yaml` - Complete CI/CD pipeline with parrallel jobs for building docker images and deploying to docker hub and ghcr registry and end-to-end testing
+- `delivery.yaml` - Complete CI/CD pipeline with parallel jobs for building Docker images and deploying to Docker Hub and GHCR registry with end-to-end testing
 
 -----
 
-## Kubernetes Deployment
+## Kubernetes Deployment (Minikube)
 
-Deploy TaskFlow to a local Minikube cluster or a production Kubernetes environment.
+TaskFlow includes a **highly automated Makefile system** that streamlines the entire Kubernetes development lifecycle. Deploy the full stack with a single command.
 
 ### **Prerequisites**
 
-- Kubernetes Cluster (Minikube, EKS, GKE, etc.)
-- `kubectl` CLI tool
+- [Minikube](https://minikube.sigs.k8s.io/docs/start/) installed
+- [kubectl](https://kubernetes.io/docs/tasks/tools/) CLI tool
+- [Docker](https://docs.docker.com/get-docker/) (for Minikube driver)
 
-### **1. Secrets Management (Important)**
-
-> **Note:** The `secrets.yaml` file is gitignored to prevent sensitive data leaks. You must create it manually or generate it from your environment variables.
-
-#### **Option A: Generate from .env (Recommended)**
-
-If you have a local `.env` file with your credentials:
+### **Quick Start: One Command Deployment**
 
 ```bash
-kubectl create secret generic taskflow-secrets \
-  --from-env-file=.env \
-  --dry-run=client -o yaml > k8s/secrets.yaml
+make run
 ```
 
-#### **Option B: Manual Creation**
+That's it! This single command automatically:
+1. Starts Minikube (if not already running)
+2. Creates the `taskflow` namespace
+3. Generates secrets with default development credentials (if missing)
+4. Pulls pre-built images from GitHub Container Registry (GHCR)
+5. Loads images into Minikube
+6. Deploys all Kubernetes manifests (API, Workers, Redis, PostgreSQL, PgBouncer)
+7. Starts Minikube tunnel for service access
+8. Sets up port forwarding to `localhost:8080`
 
-Create a file named `k8s/secrets.yaml` using the template below. **You must base64 encode your values** (e.g., `echo -n "mypassword" | base64`).
+**Access the API:**
+- Interactive Docs: http://localhost:8080/docs
+- Health Check: http://localhost:8080/status
 
-```yaml
-apiVersion: v1
-kind: Secret
-metadata:
-  name: taskflow-secrets
-  namespace: taskflow
-type: Opaque
-data:
-  DATABASE_URL: <base64-encoded-url>
-  SECRET_KEY: <base64-encoded-key>
-  REDIS_PASSWORD: <base64-encoded-password>
-```
+---
 
-### **2. Deploying the Stack**
+### **Makefile Command Reference**
 
+The Makefile provides a complete set of utilities for managing your local Kubernetes environment:
+
+#### **Core Workflow**
+
+| Command | Description |
+|---------|-------------|
+| `make run` | **Start everything.** Full deployment pipeline (pull → load → apply → forward). |
+| `make stop` | **Pause.** Stops Minikube and tunnels (data preserved in cluster). |
+| `make clean` | **Reset.** Deletes the `taskflow` namespace and all resources (**data lost**). |
+| `make restart` | **Refresh.** Equivalent to `make clean && make run`. |
+| `make logs` | Stream **color-coded logs** from all services (API: cyan, Workers: green, Queue Manager: magenta). |
+| `make db-shell` | Connect to PostgreSQL with an interactive `psql` session. |
+| `make status` | Show running pods, services, and deployments in the `taskflow` namespace. |
+| `make watch-scaling` | Monitor worker autoscaling in real-time. |
+| `make stress` | Submit 200 concurrent tasks to stress test the system. |
+| `make secrets` | Regenerate `k8s/01-secrets.yaml` with default development credentials (only if missing). |
+| `make prune` | Free up disk space by deleting Docker build cache and dangling images. |
+| `make help` | Display all available commands with descriptions. |
+
+---
+
+### **Secrets Management**
+
+The Makefile intelligently handles secrets:
+- **Auto-Generation:** If `k8s/01-secrets.yaml` doesn't exist, `make run` (or `make secrets`) creates it with safe default credentials for local development.
+- **No Overwrites:** If the file already exists, it's never modified—ensuring your custom configurations remain intact.
+- **Gitignored:** The secrets file is excluded from version control for security.
+
+**Default Development Credentials:**
+For production deployments, manually edit `k8s/01-secrets.yaml` or generate from your `.env` file:
 ```bash
-# command to create a screts.yaml file
 kubectl create secret generic taskflow-db-secret \
-  --namespace=taskflow \
-  --from-literal=POSTGRES_DB=taskflow_db \
-  --from-literal=POSTGRES_USER=postgres \
-  --from-literal=POSTGRES_PASSWORD=password \
-  --from-literal=DATABASE_URL=postgresql://postgres:password@taskflow-pgbouncer:6432/taskflow_db \
-  --dry-run=client -o yaml > secrets.yaml
-echo "---" >> secrets.yaml
-kubectl create secret generic taskflow-redis-secret \
-  --namespace=taskflow \
-  --from-literal=REDIS_PASSWORD=test_password \
-  --from-literal=REDIS_HOST_HIGH=redis-high \
-  --from-literal=REDIS_PORT_HIGH=6379 \
-  --from-literal=REDIS_HOST_LOW=redis-low \
-  --from-literal=REDIS_PORT_LOW=6379 \
-  --dry-run=client -o yaml >> secrets.yam
-echo "---" >> secrets.yaml
-kubectl create secret generic taskflow-app-secret \
-  --namespace=taskflow \
-  --from-literal=SECRET_KEY=test_secret_key_for_ci_only \
-  --from-literal=ALGORITHM=HS256 \
-  --from-literal=ACCESS_TOKEN_EXPIRE_MINUTES=60 \
-  --dry-run=client -o yaml >> secrets.yaml
-
-
-# Apply the kubernetes manifests 
-kubectl apply -f k8s/ --recursive
-
-# Verify Pods
-kubectl get pods -n taskflow -w
-
-# For port forwarding 
-kubectl port-forward -n taskflow svc/taskflow-api 8080:80
+  --from-env-file=.env \
+  --dry-run=client -o yaml > k8s/01-secrets.yaml
 ```
 
-### **3. Accessing the API**
+---
 
-If using **Minikube**, you need to tunnel the service to access it:
+### **Advanced Logging Features**
+
+The `make logs` command includes production-grade logging enhancements:
+
+- **Color-Coded Streams:** Instantly identify service outputs (API, Workers, Queue Manager).
+- **Anti-Buffering:** Real-time log streaming with `awk` flush and `PYTHONUNBUFFERED=1`.
+- **Concurrency Handling:** Supports up to 50 concurrent log streams (`--max-log-requests=50`) for autoscaling scenarios.
+
+---
+
+### **Disk Space Management**
+
+If Docker consumes too much disk space:
 
 ```bash
-# start the minikube service 
-minikube start
-
-minikube tunnel
-
-# for port forwarding 
-kubectl port-forward -n taskflow svc/taskflow-api 8080:80
-
-# Open http://localhost:8000/docs in your browser
+make prune
 ```
 
+This removes:
+- All Docker build cache (`docker builder prune --all`)
+- Dangling/unused images (`docker image prune`)
+
+Verify reclaimed space with:
+```bash
+docker system df
+```
 -----
 
 ## Development Setup
 
 If you want to develop or contribute to TaskFlow, follow these steps:
 
-### **Option 1: Docker Development (Recommended)**
+### **Option 1: Kubernetes Development (Recommended)**
+
+Use the Makefile for a production-like local environment:
+
+```bash
+git clone https://github.com/dhruvkshah75/TaskFlow.git
+cd TaskFlow
+
+# Deploy full stack to Minikube
+make run
+
+# View logs while developing
+make logs
+
+# Access API at http://localhost:8080/docs
+
+# Make code changes...
+# Rebuild and redeploy
+make restart
+
+# Debug database
+make db-shell
+
+# Monitor autoscaling
+make watch-scaling
+```
+
+### **Option 2: Docker Development**
 
 ```bash
 git clone https://github.com/dhruvkshah75/TaskFlow.git
@@ -217,74 +248,71 @@ docker compose up -d
 
 # Run migrations
 docker compose exec api alembic upgrade head
+
+# Access API at http://localhost:8000/docs
 ```
 
-### **Option 2: Local Development (No Docker)**
-
-```bash
-# Setup Python Env
-python -m venv venv
-source venv/bin/activate
-pip install -r requirements.txt
-
-# Configure Env
-cp .env.example .env
-# (Edit .env with your local DB/Redis credentials)
-
-# Run
-uvicorn api.main:app --reload
-python -m worker.main
-```
-
------
+-
 
 ## Repository Structure
 
 ```
 TaskFlow/
 ├── .github/workflows/           # CI/CD Pipelines
-│       ├── ci.yaml                  # Standard integration tests
-|       ├── delivery.yaml            # complete ci/cd pipeline 
-│       └── ci-caching.yaml          # Optimized builds with caching
+│   ├── ci.yaml                  # Standard integration tests
+│   ├── delivery.yaml            # Complete CI/CD pipeline with image builds and E2E tests
+│   └── ci-caching.yaml          # Optimized builds with caching
+│
 ├── Deployment
-│   ├── docker-compose.prod.yml      # Production Docker Compose
-│   └── k8s/                         # Kubernetes Manifests
-│       ├── apps/                    # API, Worker, Queue Manager
-│       ├── infrastructure/          # Redis, Postgres, PgBouncer
-|       ├── autoscaling/
-│       ├── 02-configmaps.yaml       # Application configuration
-│       └── secrets.yaml.example     # Secret templates (gitignored)
+│   ├── docker-compose.prod.yml  # Production Docker Compose
+│   ├── docker-compose.yml       # Development Docker Compose
+│   ├── Makefile                 # **Automated Kubernetes workflow** (make run, make logs, etc.)
+│   └── k8s/                     # Kubernetes Manifests
+│       ├── 01-secrets.yaml      # Auto-generated secrets (gitignored)
+│       ├── 02-configmaps.yaml   # Application configuration
+│       ├── apps/                # API, Worker, Queue Manager deployments
+│       ├── infrastructure/      # Redis, PostgreSQL, PgBouncer
+│       └── autoscaling/         # KEDA autoscalers
 │   
 │
 ├── API Service
-│   └── api/                         # FastAPI application
-│       ├── routers/                 # REST endpoints
-|       ├── main.py                  # Application entry point
+│   └── api/                     # FastAPI application
+│       ├── routers/             # REST endpoints
+│       ├── main.py              # Application entry point
 │       └── Dockerfile 
 │
 ├── Core Services
-│   └── core/                        # Shared utilities
-│       ├── database.py              # PostgreSQL connection
-│       ├── redis_client.py          # Redis client wrapper
-|       ├── queue_manager.py         # The queue handling file 
-|       ├── config.py                # Environment configuration
+│   └── core/                    # Shared utilities
+│       ├── database.py          # PostgreSQL connection
+│       ├── redis_client.py      # Redis client wrapper
+│       ├── queue_manager.py     # Queue distribution logic
+│       ├── config.py            # Environment configuration
 │       └── Dockerfile
 │
 ├── Worker Service
-│   └── worker/                      # Task execution engine
-│       ├── main.py                  # Worker process
-|       ├── heartbeat.py             # sends the heartbeat of the worker periodically
-│       └── tasks.py                 # Dummy Tasks 
+│   └── worker/                  # Task execution engine
+│       ├── main.py              # Worker process
+│       ├── heartbeat.py         # Periodic health reporting
+│       ├── tasks.py             # Task handlers
+│       └── Dockerfile
 │
-├── alembic/                       # Database migrations
+├── Database Migrations
+│   └── alembic/                 # Schema version control
 │   
-└── public/                        # Project website (Vercel)
-│     ├── index.html               # Interactive demo page
-|     ├── architecture.html        # page to demonstrate the system architecture 
-│     └── assets/                  # Demo GIFs and illustrations
+├── Project Website
+│   └── public/                  # Static site (deployed to Vercel)
+│       ├── index.html           # Interactive demo page
+│       ├── architecture.html    # System architecture documentation
+│       └── assets/              # Demo GIFs and illustrations
 │
-├── stress-test.py               # Load testing (200 tasks)
-└── verify_jobs.py               # CI/CD validation script
+├── Testing & Scripts
+│   └── scripts/
+│       ├── stress-test.py       # Load testing (200 concurrent tasks)
+│       ├── verify_jobs.py       # CI/CD validation script
+│       └── setup-production.sh  # Production deployment helper
+│
+└── Configuration
+    └── .env.production.example  # Production template
 ```
 
 ## Example `.env` Configuration

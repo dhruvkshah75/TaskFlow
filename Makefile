@@ -4,6 +4,7 @@
 # --- Configuration ---
 NAMESPACE := taskflow
 TAG := latest
+# Registry URL
 REPO := ghcr.io/dhruvkshah75
 
 # --- Colors ---
@@ -15,7 +16,7 @@ LOG_WORKER := \033[32m    # Green
 LOG_MANAGER := \033[35m   # Magenta
 ERROR := \033[31m         # Red
 
-.PHONY: all help run start-minikube setup build load apply tunnel wait forward stop clean logs logs-api logs-worker logs-manager watch-scaling db-shell stress
+.PHONY: all help run start-minikube setup secrets pull load apply tunnel wait forward stop clean logs logs-api logs-worker logs-manager watch-scaling db-shell stress prune
 
 # --- Main Commands ---
 
@@ -25,7 +26,8 @@ help: ## Show this help message
 	@echo "$(BOLD)TaskFlow Management Commands:$(RESET)"
 	@awk 'BEGIN {FS = ":.*?## "} /^[a-zA-Z_-]+:.*?## / {printf "  $(MSG_COLOR)%-20s$(RESET) %s\n", $$1, $$2}' $(MAKEFILE_LIST)
 
-run: start-minikube setup build load apply tunnel wait forward ## Start the full project (One-click)
+# Sequence: Start -> Setup -> Secrets -> PULL -> Load -> Apply -> Tunnel -> Wait -> Forward
+run: start-minikube setup secrets pull load apply tunnel wait forward ## 🚀 Start project (Pull from Registry)
 
 # --- Individual Steps ---
 
@@ -47,17 +49,51 @@ setup: ## Create namespace if missing
 		kubectl create namespace $(NAMESPACE); \
 	fi
 
-build: ## Build all Docker images locally
-	@echo "$(MSG_COLOR)Building Images (using local cache)...$(RESET)"
-	@echo "   Building API..."
-	@docker build -t $(REPO)/taskflow-api:$(TAG) -f api/Dockerfile . > /dev/null
-	@echo "   Building Worker..."
-	@docker build -t $(REPO)/taskflow-worker:$(TAG) -f worker/Dockerfile . > /dev/null
-	@echo "   Building Queue Manager..."
-	@docker build -t $(REPO)/taskflow-queue-manager:$(TAG) -f core/Dockerfile . > /dev/null
-	@echo "   Build Complete!"
+secrets: ## Generate k8s/01-secrets.yaml only if it doesn't exist
+	@if [ ! -f k8s/01-secrets.yaml ]; then \
+		echo "$(MSG_COLOR)Secrets file missing. Generating default dev secrets in k8s/01-secrets.yaml...$(RESET)"; \
+		# 1. DB Secret \
+		kubectl create secret generic taskflow-db-secret \
+			--namespace=$(NAMESPACE) \
+			--from-literal=POSTGRES_DB=taskflow_db \
+			--from-literal=POSTGRES_USER=postgres \
+			--from-literal=POSTGRES_PASSWORD=password \
+			--from-literal=DATABASE_URL=postgresql://postgres:password@taskflow-pgbouncer:6432/taskflow_db \
+			--dry-run=client -o yaml > k8s/01-secrets.yaml; \
+		echo "---" >> k8s/01-secrets.yaml; \
+		# 2. Redis Secret \
+		kubectl create secret generic taskflow-redis-secret \
+			--namespace=$(NAMESPACE) \
+			--from-literal=REDIS_PASSWORD=test_password \
+			--from-literal=REDIS_HOST_HIGH=redis-high \
+			--from-literal=REDIS_PORT_HIGH=6379 \
+			--from-literal=REDIS_HOST_LOW=redis-low \
+			--from-literal=REDIS_PORT_LOW=6379 \
+			--dry-run=client -o yaml >> k8s/01-secrets.yaml; \
+		echo "---" >> k8s/01-secrets.yaml; \
+		# 3. App Secret \
+		kubectl create secret generic taskflow-app-secret \
+			--namespace=$(NAMESPACE) \
+			--from-literal=SECRET_KEY=test_secret_key_for_ci_only \
+			--from-literal=ALGORITHM=HS256 \
+			--from-literal=ACCESS_TOKEN_EXPIRE_MINUTES=60 \
+			--dry-run=client -o yaml >> k8s/01-secrets.yaml; \
+		echo "   Secrets generated successfully!"; \
+	else \
+		echo "$(MSG_COLOR)Secrets file found (k8s/01-secrets.yaml). Skipping generation.$(RESET)"; \
+	fi
 
-load: ## Load built images into Minikube
+pull: ## Pull Docker images from GHCR
+	@echo "$(MSG_COLOR)Pulling Images from GHCR...$(RESET)"
+	@echo "   Pulling API..."
+	@docker pull $(REPO)/taskflow-api:$(TAG) > /dev/null
+	@echo "   Pulling Worker..."
+	@docker pull $(REPO)/taskflow-worker:$(TAG) > /dev/null
+	@echo "   Pulling Queue Manager..."
+	@docker pull $(REPO)/taskflow-queue-manager:$(TAG) > /dev/null
+	@echo "   Pull Complete!"
+
+load: ## Load pulled images into Minikube
 	@echo "$(MSG_COLOR)Loading images into Minikube...$(RESET)"
 	@minikube image load $(REPO)/taskflow-api:$(TAG)
 	@minikube image load $(REPO)/taskflow-worker:$(TAG)
@@ -120,10 +156,9 @@ logs-worker: ## Stream Worker logs only
 logs-manager: ## Stream Queue Manager logs only
 	@kubectl logs -n $(NAMESPACE) -l app=queue-manager -f
 
-logs: ## Stream ALL logs (Can cause throttling because of many concurrent runs)
+logs: ## Stream ALL logs (Color-coded)
 	@echo "$(MSG_COLOR)Streaming logs (Ctrl+C to stop)...$(RESET)"
 	@echo "   $(LOG_API)API Logs$(RESET) | $(LOG_WORKER)Worker Logs$(RESET) | $(LOG_MANAGER)Manager Logs$(RESET)"
-	@# Increased max-log-requests to 50 to handle autoscaled workers
 	@kubectl logs -n $(NAMESPACE) -l 'app in (api, worker, queue-manager)' -f --prefix=true --max-log-requests=50 | \
 	awk '\
 	/pod\/api/ { print "$(LOG_API)" $$0 "$(RESET)"; fflush(); next } \
@@ -134,3 +169,11 @@ logs: ## Stream ALL logs (Can cause throttling because of many concurrent runs)
 stress: ## Run the stress test (200 tasks)
 	@echo "$(MSG_COLOR)Unleashing 200 tasks...$(RESET)"
 	@python3 ./tests/stress-test.py
+
+prune: ## Free up space (Deletes Build Cache & Unused Images)
+	@echo "$(MSG_COLOR)Cleaning up unused Docker data...$(RESET)"
+	@# 1. Delete Build Cache (The "Invisible" space)
+	@docker builder prune --all --force
+	@# 2. Delete Dangling Images (Old versions that were overwritten)
+	@docker image prune --force
+	@echo "$(MSG_COLOR)Cleanup complete!$(RESET)"
