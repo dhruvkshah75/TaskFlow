@@ -43,39 +43,6 @@ The system leverages **FastAPI** for high-performance task submission and monito
   </td>
 
 
-## Quick Deployment (Docker)
-
-Deploy TaskFlow in production using Docker Compose.
-
-### **One-Line Install**
-```bash
-curl -sSL https://raw.githubusercontent.com/dhruvkshah75/TaskFlow/main/install.sh | bash
-```
-
-### **Manual Install**
-
-1. **Download Configuration:**
-
-```bash
-curl -O https://raw.githubusercontent.com/dhruvkshah75/TaskFlow/main/docker-compose.prod.yml
-curl -O https://raw.githubusercontent.com/dhruvkshah75/TaskFlow/main/.env.production.example
-curl -O https://raw.githubusercontent.com/dhruvkshah75/TaskFlow/main/scripts/setup-production.sh
-chmod +x setup-production.sh
-```
-
-2. **Generate Credentials & Deploy:**
-
-```bash
-./setup-production.sh
-docker compose --env-file .env.production -f docker-compose.prod.yml up -d
-```
-
-3. **Verify:**
-
-```bash
-curl http://localhost:8000/status
-```
-
 -----
 
 ## CI/CD & Testing
@@ -94,7 +61,7 @@ TaskFlow includes automated continuous integration with comprehensive end-to-end
 make stress     # Submit 200 concurrent tasks
 
 # Or directly with Python
-python scripts/stress-test.py
+python tests/stress-test.py
 ```
 
 View CI/CD workflows in `.github/workflows/`:
@@ -173,17 +140,6 @@ kubectl create secret generic taskflow-db-secret \
   --from-env-file=.env \
   --dry-run=client -o yaml > k8s/01-secrets.yaml
 ```
-
----
-
-### **Advanced Logging Features**
-
-The `make logs` command includes production-grade logging enhancements:
-
-- **Color-Coded Streams:** Instantly identify service outputs (API, Workers, Queue Manager).
-- **Anti-Buffering:** Real-time log streaming with `awk` flush and `PYTHONUNBUFFERED=1`.
-- **Concurrency Handling:** Supports up to 50 concurrent log streams (`--max-log-requests=50`) for autoscaling scenarios.
-
 ---
 
 ### **Disk Space Management**
@@ -201,144 +157,6 @@ This removes:
 Verify reclaimed space with:
 ```bash
 docker system df
-```
------
-
-## Development Setup
-
-If you want to develop or contribute to TaskFlow, follow these steps:
-
-### **Option 1: Kubernetes Development (Recommended)**
-
-Use the Makefile for a production-like local environment:
-
-```bash
-git clone https://github.com/dhruvkshah75/TaskFlow.git
-cd TaskFlow
-
-# Deploy full stack to Minikube
-make run
-
-# View logs while developing
-make logs
-
-# Access API at http://localhost:8080/docs
-
-# Make code changes...
-# Rebuild and redeploy
-make restart
-
-# Debug database
-make db-shell
-
-# Monitor autoscaling
-make watch-scaling
-```
-
-### **Option 2: Docker Development**
-
-```bash
-git clone https://github.com/dhruvkshah75/TaskFlow.git
-cd TaskFlow
-cp .env.docker.example .env.docker
-
-# Start services
-docker compose build
-docker compose up -d
-
-# Run migrations
-docker compose exec api alembic upgrade head
-
-# Access API at http://localhost:8000/docs
-```
-
--
-
-## Repository Structure
-
-```
-TaskFlow/
-├── .github/workflows/           # CI/CD Pipelines
-│   ├── ci.yaml                  # Standard integration tests
-│   ├── delivery.yaml            # Complete CI/CD pipeline with image builds and E2E tests
-│   └── ci-caching.yaml          # Optimized builds with caching
-│
-├── Deployment
-│   ├── docker-compose.prod.yml  # Production Docker Compose
-│   ├── docker-compose.yml       # Development Docker Compose
-│   ├── Makefile                 # **Automated Kubernetes workflow** (make run, make logs, etc.)
-│   └── k8s/                     # Kubernetes Manifests
-│       ├── 01-secrets.yaml      # Auto-generated secrets (gitignored)
-│       ├── 02-configmaps.yaml   # Application configuration
-│       ├── apps/                # API, Worker, Queue Manager deployments
-│       ├── infrastructure/      # Redis, PostgreSQL, PgBouncer
-│       └── autoscaling/         # KEDA autoscalers
-│   
-│
-├── API Service
-│   └── api/                     # FastAPI application
-│       ├── routers/             # REST endpoints
-│       ├── main.py              # Application entry point
-│       └── Dockerfile 
-│
-├── Core Services
-│   └── core/                    # Shared utilities
-│       ├── database.py          # PostgreSQL connection
-│       ├── redis_client.py      # Redis client wrapper
-│       ├── queue_manager.py     # Queue distribution logic
-│       ├── config.py            # Environment configuration
-│       └── Dockerfile
-│
-├── Worker Service
-│   └── worker/                  # Task execution engine
-│       ├── main.py              # Worker process
-│       ├── heartbeat.py         # Periodic health reporting
-│       ├── tasks.py             # Task handlers
-│       └── Dockerfile
-│
-├── Database Migrations
-│   └── alembic/                 # Schema version control
-│   
-├── Project Website
-│   └── public/                  # Static site (deployed to Vercel)
-│       ├── index.html           # Interactive demo page
-│       ├── architecture.html    # System architecture documentation
-│       └── assets/              # Demo GIFs and illustrations
-│
-├── Testing & Scripts
-│   └── scripts/
-│       ├── stress-test.py       # Load testing (200 concurrent tasks)
-│       ├── verify_jobs.py       # CI/CD validation script
-│       └── setup-production.sh  # Production deployment helper
-│
-└── Configuration
-    └── .env.production.example  # Production template
-```
-
-## Example `.env` Configuration
-
-Create a `.env` file in the root directory:
-
-```env
-# Database Configuration
-DATABASE_URL=postgresql://user:pass@localhost:5432/taskflow
-
-# Security
-SECRET_KEY=replace_with_secure_key
-ALGORITHM=HS256
-ACCESS_TOKEN_EXPIRE_MINUTES=180
-
-# Redis Configuration
-# Note: In K8s, these are overridden by env vars in the deployment YAMLs
-REDIS_HOST_HIGH=redis_high
-REDIS_PORT_HIGH=6379
-REDIS_HOST_LOW=redis_low
-REDIS_PORT_LOW=6379
-REDIS_PASSWORD=your_redis_password
-
-# App Settings
-RATE_LIMIT_PER_HOUR=1000
-HEARTBEAT_INTERVAL_SECONDS=30
 ```
 
 ---
