@@ -32,12 +32,12 @@ The system leverages **FastAPI** for high-performance task submission and monito
 
 
   <td style="width: 50%; vertical-align: top;">
-    <img src="./assets/illustration.png" 
+    <img src="./public/assets1/illustration.png" 
           style="width: 60%; object-fit: cover;" 
           alt="TaskFlow Scaling Proof">
   </td>
   <td style="width: 50%; vertical-align: top;">
-    <img src="assets/output_high_res.gif" 
+    <img src="./public/assets1/output_high_res.gif" 
           style="width: 100%; aspect-ratio: 16 / 9; object-fit: cover;" 
           alt="TaskFlow Auto-Scaling Demo">
   </td>
