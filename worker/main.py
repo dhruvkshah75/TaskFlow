@@ -123,6 +123,7 @@ async def main():
 
     await worker.start()
 
+
 if __name__ == "__main__":
     try:
         asyncio.run(main())
