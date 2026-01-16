@@ -1,12 +1,54 @@
-# Distributed Task Queue (TaskFlow)
+<div align="center">
 
-[![Docker](https://img.shields.io/badge/docker-%230db7ed.svg?style=flat-square&logo=docker&logoColor=white)](https://www.docker.com/)
-[![Kubernetes](https://img.shields.io/badge/kubernetes-%23326ce5.svg?style=flat-square&logo=kubernetes&logoColor=white)](https://kubernetes.io/)
-[![FastAPI](https://img.shields.io/badge/FastAPI-005571?style=flat-square&logo=fastapi)](https://fastapi.tiangolo.com/)
-[![Python](https://img.shields.io/badge/python-3.11+-blue.svg?style=flat-square&logo=python&logoColor=white)](https://www.python.org/)
-[![Redis](https://img.shields.io/badge/redis-%23DD0031.svg?style=flat-square&logo=redis&logoColor=white)](https://redis.io/)
-[![PostgreSQL](https://img.shields.io/badge/postgresql-%23316192.svg?style=flat-square&logo=postgresql&logoColor=white)](https://www.postgresql.org/)
-[![CI/CD](https://img.shields.io/badge/CI%2FCD-Automated-green?style=flat-square&logo=github-actions)](https://github.com/dhruvkshah75/TaskFlow/actions)
+  <img src="public/assets/logo.png" alt="logo" width="400" height="auto" />
+  
+  <h1>TaskFlow</h1>
+  
+  <p>
+    <b>Streamline your workflow with intelligent task management ⚡️</b>
+  </p>
+  
+  <p>
+    <a href="https://github.com/dhruvkshah75/TaskFlow">
+      <img src="https://img.shields.io/github/languages/top/dhruvkshah75/TaskFlow?style=flat-square&color=blue" alt="Top Language" />
+    </a>
+    <a href="https://github.com/dhruvkshah75/TaskFlow">
+      <img src="https://img.shields.io/github/languages/code-size/dhruvkshah75/TaskFlow?style=flat-square&color=blue" alt="Code Size" />
+    </a>
+    <a href="https://github.com/dhruvkshah75/TaskFlow/issues">
+      <img src="https://img.shields.io/github/issues/dhruvkshah75/TaskFlow?style=flat-square&color=yellow" alt="Issues" />
+    </a>
+    <a href="https://github.com/dhruvkshah75/TaskFlow/releases">
+      <img src="https://img.shields.io/github/v/release/dhruvkshah75/TaskFlow?style=flat-square&color=green" alt="Latest Release" />
+    </a>
+  </p>
+
+  <p>
+    <a href="https://www.docker.com/">
+      <img src="https://img.shields.io/badge/docker-%230db7ed.svg?style=flat-square&logo=docker&logoColor=white" alt="Docker">
+    </a>
+    <a href="https://kubernetes.io/">
+      <img src="https://img.shields.io/badge/kubernetes-%23326ce5.svg?style=flat-square&logo=kubernetes&logoColor=white" alt="Kubernetes">
+    </a>
+    <a href="https://fastapi.tiangolo.com/">
+      <img src="https://img.shields.io/badge/FastAPI-005571?style=flat-square&logo=fastapi" alt="FastAPI">
+    </a>
+    <a href="https://www.python.org/">
+      <img src="https://img.shields.io/badge/python-3.11+-blue.svg?style=flat-square&logo=python&logoColor=white" alt="Python">
+    </a>
+    <a href="https://redis.io/">
+      <img src="https://img.shields.io/badge/redis-%23DD0031.svg?style=flat-square&logo=redis&logoColor=white" alt="Redis">
+    </a>
+    <a href="https://www.postgresql.org/">
+      <img src="https://img.shields.io/badge/postgresql-%23316192.svg?style=flat-square&logo=postgresql&logoColor=white" alt="PostgreSQL">
+    </a>
+    <a href="https://github.com/dhruvkshah75/TaskFlow/actions">
+      <img src="https://img.shields.io/badge/CI%2FCD-Automated-green?style=flat-square&logo=github-actions" alt="CI/CD">
+    </a>
+  </p>
+   
+  <br />
+</div>
 
 ## Overview
 
