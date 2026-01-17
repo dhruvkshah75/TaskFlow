@@ -14,6 +14,9 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
+# Create directory for uploaded task files
+RUN mkdir -p /app/worker/tasks
+
 # this forces to print logs immediately 
 ENV PYTHONUNBUFFERED=1  
 

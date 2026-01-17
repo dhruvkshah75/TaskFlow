@@ -6,7 +6,6 @@ from sqlalchemy.orm import Session
 from .. import schemas
 from typing import List, Optional
 from ..rate_limiter import user_rate_limiter
-from ..utils import cache_task, check_cache_task
 from core.redis_client import get_redis
 import redis, logging, shutil, os, uuid
 from datetime import datetime, timezone, timedelta
@@ -35,11 +34,10 @@ def create_task(task: schemas.TaskCreate, db: Session=Depends(get_db),
         )
 
     # Salt the payload with a UUID
-    # This ensures that even if the user sends the same 'data'
     salted_payload = {
-            "data": task.payload,
-            "_run_id": str(uuid.uuid4())
-        }
+        "data": task.payload,
+        "_run_id": str(uuid.uuid4())
+    }
 
     # Calculate scheduling
     schedule_time = task.scheduled_at  
@@ -53,13 +51,6 @@ def create_task(task: schemas.TaskCreate, db: Session=Depends(get_db),
         scheduled_at=scheduled_for,                    
         owner_id=current_user.id
     )
-
-    # Cache it
-    cache_task(redis_client, {
-        "title": task.title,
-        "owner_id": current_user.id,
-        "payload": salted_payload
-    })
 
     db.add(new_task)
     db.commit()
@@ -142,12 +133,6 @@ def delete_task(task_id: int, db: Session=Depends(get_db),
             )
         else:
             task_user_query.delete(synchronize_session=False)
-            db.commit()
-            return Response(status_code=status.HTTP_204_NO_CONTENT)
-        
-
-
-
 # ==================================== UPLOADING A TASK FILE ===============================================
 
 UPLOAD_DIR = "worker/tasks"
@@ -199,6 +184,9 @@ async def upload_task_file(
     # This ensures the worker knows exactly which file to look for by title
     file_path = os.path.join(UPLOAD_DIR, f"{file_name}.py")
 
+    # Check if file already exists
+    file_exists = os.path.exists(file_path)
+
     # Save the file to the shared volume
     try:
         with open(file_path, "wb") as buffer:
@@ -210,7 +198,10 @@ async def upload_task_file(
             detail="Failed to save the task file"
         )
 
-    return {"message": f"Logic for task '{file_name}' uploaded successfully"}
+    if file_exists:
+        return {"message": f"Logic for task '{file_name}' updated successfully (overwrote existing file)"}
+    else:
+        return {"message": f"Logic for task '{file_name}' uploaded successfully"}
 
 
 
@@ -243,4 +234,52 @@ async def upload_task_file(
 # print(response.json())
 
 
+@router.get("/{task_id}", response_model=schemas.TaskResponse,
+            dependencies = [Depends(user_rate_limiter)])
+def get_a_task(task_id: int, db: Session=Depends(get_db),
+                  current_user: models.User = Depends(get_current_user)):
+    
+    task = db.query(models.Tasks).filter(
+        models.Tasks.id == task_id
+    ).first()
 
+    if task == None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
+                            detail=f"Task with id: {task_id} not found")
+    else:
+        return task
+
+
+@router.delete("/{task_id}", status_code=status.HTTP_204_NO_CONTENT, 
+               dependencies = [Depends(user_rate_limiter)])
+def delete_task(task_id: int, db: Session=Depends(get_db),
+                current_user: models.User = Depends(get_current_user)):
+    """
+    Delete the task with this task id. 
+    Only the user who created the task can delete this task with the id
+    """
+
+    task_user_query = db.query(models.Tasks).filter(
+        models.Tasks.id == task_id
+    )
+
+    if task_user_query.first() == None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"The task with the id {task_id} not found"
+        )
+    else:
+        task = task_user_query.filter(
+            models.Tasks.owner_id == current_user.id
+        ).first()
+
+        if task == None:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail=f"Not authorized to perform this action"
+            )
+        else:
+            task_user_query.delete(synchronize_session=False)
+            db.commit()
+            return Response(status_code=status.HTTP_204_NO_CONTENT)
+        

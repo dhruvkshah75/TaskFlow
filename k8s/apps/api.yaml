@@ -38,6 +38,7 @@ spec:
       initContainers:
         - name: run-migration
           image: ghcr.io/dhruvkshah75/taskflow-api:latest
+          imagePullPolicy: Never
           command: ["alembic", "upgrade", "head"]
           envFrom:
             - configMapRef:
@@ -65,9 +66,13 @@ spec:
       containers:
       - name: api 
         image: ghcr.io/dhruvkshah75/taskflow-api:latest
+        imagePullPolicy: Never
         command: ["uvicorn", "api.main:app", "--host", "0.0.0.0", "--port", "8000"]
         ports:
         - containerPort: 8000
+        volumeMounts:
+          - name: task-files
+            mountPath: /app/worker/tasks
         envFrom:  # loading all the configurations for the api container
             - configMapRef:
                 name: taskflow-app-config
@@ -112,5 +117,10 @@ spec:
           limits:
             memory: "512Mi"
             cpu: "500m"
+      
+      volumes:
+        - name: task-files
+          persistentVolumeClaim:
+            claimName: task-files-pvc
 
 

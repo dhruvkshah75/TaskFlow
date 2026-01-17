@@ -175,7 +175,7 @@ def cache_task(redis_client: redis.Redis, task_data: dict):
     logger.info(f"Cached task detils for the user:{task_data['owner_id']}")
 
 
-def check_cache_task(redis_client: redis.Redis, task_title: str, owner_id: int, payload: str):
+def check_cache_task(redis_client: redis.Redis, task_title: str, owner_id: int, payload: dict):
     """
     Here we check the cache based on hashed value of task_title and owner_id
     """

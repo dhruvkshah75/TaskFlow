@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: task-files-pvc
+  namespace: taskflow
+spec:
+  # ReadWriteMany allows multiple pods to mount the volume simultaneously
+  # This is needed because both API pods and Worker pods need access
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 500Mi

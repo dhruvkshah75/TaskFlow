@@ -14,6 +14,9 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
+# Create directory for uploaded task files
+RUN mkdir -p /app/worker/tasks
+
 ENV PYTHONUNBUFFERED=1
 
 CMD ["python", "-m", "core.queue_manager"]

@@ -20,6 +20,10 @@ spec:
           image: ghcr.io/dhruvkshah75/taskflow-worker:latest
           imagePullPolicy: Never 
           
+          volumeMounts:
+            - name: task-files
+              mountPath: /app/worker/tasks
+          
           # Load ALL Configs and Secrets
           envFrom:
             - configMapRef:
@@ -55,3 +59,8 @@ spec:
             limits:
               memory: "256Mi"  # Was 1Gi -> Now capped at 256Mi
               cpu: "500m"      # Was 1000m -> Now capped at 0.5 CPU
+      
+      volumes:
+        - name: task-files
+          persistentVolumeClaim:
+            claimName: task-files-pvc

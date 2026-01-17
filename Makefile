@@ -16,7 +16,7 @@ LOG_WORKER := \033[32m    # Green
 LOG_MANAGER := \033[35m   # Magenta
 ERROR := \033[31m         # Red
 
-.PHONY: all help run start-minikube setup secrets pull load apply tunnel wait forward stop clean logs logs-api logs-worker logs-manager watch-scaling db-shell stress prune
+.PHONY: all help run run-local start-minikube setup secrets login pull build-local load apply install-keda tunnel wait forward stop clean logs logs-api logs-worker logs-manager watch-scaling db-shell stress prune
 
 # --- Main Commands ---
 
@@ -27,16 +27,18 @@ help: ## Show this help message
 	@awk 'BEGIN {FS = ":.*?## "} /^[a-zA-Z_-]+:.*?## / {printf "  $(MSG_COLOR)%-20s$(RESET) %s\n", $$1, $$2}' $(MAKEFILE_LIST)
 
 # Sequence: Start -> Setup -> Secrets -> PULL -> Load -> Apply -> Tunnel -> Wait -> Forward
-run: start-minikube setup secrets pull load apply tunnel wait forward ## 🚀 Start project (Pull from Registry)
+run: start-minikube setup secrets pull load apply tunnel wait forward ## Start project (Pull from Registry)
+
+run-local: start-minikube setup secrets build-local load apply tunnel wait forward ## Start project (Build locally)
 
 # --- Individual Steps ---
 
 start-minikube: ## Check and start Minikube
 	@echo "$(MSG_COLOR)Checking Minikube status...$(RESET)"
-	@if minikube status > /dev/null 2>&1; then \
+	@if minikube status 2>&1 | grep -q "Running"; then \
 		echo "   Minikube is already running."; \
 	else \
-		echo "   Minikube is stopped. Starting it now..."; \
+		echo "   Minikube is not running. Starting it now..."; \
 		minikube start; \
 	fi
 
@@ -83,6 +85,16 @@ secrets: ## Generate k8s/01-secrets.yaml only if it doesn't exist
 		echo "$(MSG_COLOR)Secrets file found (k8s/01-secrets.yaml). Skipping generation.$(RESET)"; \
 	fi
 
+login: ## Authenticate Docker with GHCR
+	@echo "$(MSG_COLOR)Authenticating Docker with GHCR...$(RESET)"
+	@if command -v gh > /dev/null 2>&1 && gh auth status > /dev/null 2>&1; then \
+		echo "   Using GitHub CLI token..."; \
+		echo $$(gh auth token) | docker login ghcr.io -u dhruvkshah75 --password-stdin; \
+	else \
+		echo "$(ERROR)GitHub CLI not authenticated. Run 'gh auth login' first.$(RESET)"; \
+		exit 1; \
+	fi
+
 pull: ## Pull Docker images from GHCR
 	@echo "$(MSG_COLOR)Pulling Images from GHCR...$(RESET)"
 	@echo "   Pulling API..."
@@ -93,6 +105,16 @@ pull: ## Pull Docker images from GHCR
 	@docker pull $(REPO)/taskflow-queue-manager:$(TAG) > /dev/null
 	@echo "   Pull Complete!"
 
+build-local: ## Build Docker images locally
+	@echo "$(MSG_COLOR)Building Images Locally...$(RESET)"
+	@echo "   Building API..."
+	@docker build --no-cache -t $(REPO)/taskflow-api:$(TAG) -f api/Dockerfile .
+	@echo "   Building Worker..."
+	@docker build --no-cache -t $(REPO)/taskflow-worker:$(TAG) -f worker/Dockerfile .
+	@echo "   Building Queue Manager..."
+	@docker build --no-cache -t $(REPO)/taskflow-queue-manager:$(TAG) -f core/Dockerfile .
+	@echo "   Build Complete!"
+
 load: ## Load pulled images into Minikube
 	@echo "$(MSG_COLOR)Loading images into Minikube...$(RESET)"
 	@minikube image load $(REPO)/taskflow-api:$(TAG)
@@ -101,7 +123,14 @@ load: ## Load pulled images into Minikube
 
 apply: ## Apply all Kubernetes manifests
 	@echo "$(MSG_COLOR)Applying Manifests...$(RESET)"
-	@kubectl apply -f k8s/ --recursive -n $(NAMESPACE)
+	@kubectl apply -f k8s/ --recursive -n $(NAMESPACE) || \
+		(echo "$(ERROR)Warning: Some manifests failed (possibly KEDA autoscaling). Core services should still work.$(RESET)" && \
+		kubectl apply -f k8s/ --recursive -n $(NAMESPACE) --validate=false 2>/dev/null || true)
+
+install-keda: ## Install KEDA for autoscaling (optional)
+	@echo "$(MSG_COLOR)Installing KEDA...$(RESET)"
+	@kubectl apply --server-side -f https://github.com/kedacore/keda/releases/download/v2.16.1/keda-2.16.1.yaml
+	@echo "   KEDA installed! You can now apply autoscaling manifests."
 
 tunnel: ## Start Minikube tunnel in background
 	@echo "$(MSG_COLOR)Starting Minikube tunnel in background...$(RESET)"
