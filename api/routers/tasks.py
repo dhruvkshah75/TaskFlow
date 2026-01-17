@@ -163,7 +163,31 @@ async def upload_task_file(
     current_user: models.User = Depends(get_current_user)
 ):
     """
+    Upload a Python script to be executed as a dynamic task.
+    This endpoint allows users to upload custom business logic that the worker 
+    cluster will execute. The uploaded file is stored in a shared volume.
 
+    ### Task Script Protocol:
+    The uploaded `.py` file **MUST** contain an `async def handler(payload: dict)` 
+    function. This function is the entry point for the worker.
+
+    **Example script:**
+    ```python
+    async def handler(payload):
+        return {"result": f"Processed {payload.get('data')}"}
+    ```
+    ### Parameters:
+    - **file_name**: The title/identifier. This name must be used as the `title` 
+      when creating a task via `POST /tasks/`.
+    - **file**: A `.py` file containing the task logic.
+    ### Response:
+    - **201 Created**: File successfully saved to the shared volume.
+    - **400 Bad Request**: If the file extension is not `.py`.
+    - **429 Too Many Requests**: If the user exceeds the rate limit.
+    - **500 Internal Server Error**: If there is a filesystem or storage error.
+    ### Cleanup:
+    Note: In this FaaS model, the logic file is automatically deleted from 
+    the server after the task has been successfully executed or has failed.
     """
     # Validation: Only allow Python files
     if not file.filename.endswith(".py"):
