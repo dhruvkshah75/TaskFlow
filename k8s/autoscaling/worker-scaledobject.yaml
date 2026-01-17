@@ -14,7 +14,7 @@ spec:
   triggers:
   - type: redis
     metadata:
-      address: redis-high.taskflow.svc.cluster.local:6379
+      address: redis-low.taskflow.svc.cluster.local:6379  # Changed from redis-high
       listName: default 
       listLength: "5"
       databaseIndex: "0"

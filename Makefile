@@ -29,7 +29,7 @@ help: ## Show this help message
 # Sequence: Start -> Setup -> Secrets -> PULL -> Load -> Apply -> Tunnel -> Wait -> Forward
 run: start-minikube setup secrets pull load apply tunnel wait forward ## Start project (Pull from Registry)
 
-run-local: start-minikube setup secrets build-local-api build-local-worker build-local-queue-manager load apply tunnel wait forward ## Start project (Build locally)
+run-local: start-minikube setup secrets build-local-sequential load apply tunnel wait forward ## Start project (Build locally)
 
 # --- Individual Steps ---
 
