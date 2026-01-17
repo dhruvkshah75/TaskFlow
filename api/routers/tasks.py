@@ -133,6 +133,8 @@ def delete_task(task_id: int, db: Session=Depends(get_db),
             )
         else:
             task_user_query.delete(synchronize_session=False)
+
+
 # ==================================== UPLOADING A TASK FILE ===============================================
 
 UPLOAD_DIR = "worker/tasks"
@@ -233,53 +235,3 @@ async def upload_task_file(
 
 # print(response.json())
 
-
-@router.get("/{task_id}", response_model=schemas.TaskResponse,
-            dependencies = [Depends(user_rate_limiter)])
-def get_a_task(task_id: int, db: Session=Depends(get_db),
-                  current_user: models.User = Depends(get_current_user)):
-    
-    task = db.query(models.Tasks).filter(
-        models.Tasks.id == task_id
-    ).first()
-
-    if task == None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
-                            detail=f"Task with id: {task_id} not found")
-    else:
-        return task
-
-
-@router.delete("/{task_id}", status_code=status.HTTP_204_NO_CONTENT, 
-               dependencies = [Depends(user_rate_limiter)])
-def delete_task(task_id: int, db: Session=Depends(get_db),
-                current_user: models.User = Depends(get_current_user)):
-    """
-    Delete the task with this task id. 
-    Only the user who created the task can delete this task with the id
-    """
-
-    task_user_query = db.query(models.Tasks).filter(
-        models.Tasks.id == task_id
-    )
-
-    if task_user_query.first() == None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"The task with the id {task_id} not found"
-        )
-    else:
-        task = task_user_query.filter(
-            models.Tasks.owner_id == current_user.id
-        ).first()
-
-        if task == None:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail=f"Not authorized to perform this action"
-            )
-        else:
-            task_user_query.delete(synchronize_session=False)
-            db.commit()
-            return Response(status_code=status.HTTP_204_NO_CONTENT)
-        
