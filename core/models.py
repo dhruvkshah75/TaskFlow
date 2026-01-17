@@ -45,7 +45,7 @@ class Tasks(Base):
 
     id = Column(Integer, primary_key=True, nullable=False)
     title = Column(String, nullable=False) # tasks can have the same title but the title and payload cant be same togethor
-    payload = Column(String, nullable=False)
+    payload = Column(JSONB, nullable=False)
     priority = Column(SQLAlchemyEnum(PriorityType), server_default=PriorityType.low, 
                       nullable=False)
     owner_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"),
@@ -99,17 +99,3 @@ class ApiKey(Base):
 
     owner = relationship("User")
 
-
-
-class Webhook(Base):
-    __tablename__ = "webhooks"
-
-    id = Column(Integer, primary_key=True, nullable=False)
-    event_type = Column(SQLAlchemyEnum(EventType), nullable=False)
-    target_url = Column(String, nullable=False)
-    owner_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), 
-                      nullable=False)
-    created_at = Column(TIMESTAMP(timezone=True), nullable=False, 
-                        server_default=text('now()'))
-
-    owner = relationship("User")

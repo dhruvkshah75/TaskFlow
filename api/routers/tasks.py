@@ -8,7 +8,7 @@ from typing import List, Optional
 from ..rate_limiter import user_rate_limiter
 from ..utils import cache_task, check_cache_task
 from core.redis_client import get_redis
-import redis, logging, shutil, os
+import redis, logging, shutil, os, uuid
 from datetime import datetime, timezone, timedelta
 
 logger = logging.getLogger(__name__)
@@ -20,48 +20,47 @@ router = APIRouter(
 
 # ============================ TASK RELATED CRUD OPERATRION ==========================
 
-@router.post("/", status_code=status.HTTP_201_CREATED, response_model=schemas.TaskResponse,
-             dependencies = [Depends(user_rate_limiter)])
+
+@router.post("/", status_code=status.HTTP_201_CREATED, response_model=schemas.TaskResponse)
 def create_task(task: schemas.TaskCreate, db: Session=Depends(get_db),
                 current_user: models.User = Depends(get_current_user),
                 redis_client: redis.Redis = Depends(get_redis)):
-    """
-    Creates a new task for the currently logged in user
-    We also have to make sure that that the same task is not put up by the same user
-    Can be done with the help of caching
-    """
-    task_data = check_cache_task(redis_client, task.title, current_user.id, task.payload)
-    if task_data:
-        logger.info(f"Cache HIT: Found a task with the same title:{task.title}")
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT,
-                            detail=f"Task is already registered. Cannot register the same task again")
-    else:
-        logger.info(f"Cache MISS: Searching in the Database")
-        task_data = db.query(models.Tasks).filter(
-            models.Tasks.title == task.title,
-            models.Tasks.payload == task.payload,
-            models.Tasks.owner_id == current_user.id,
-            models.Tasks.status != 'COMPLETED'
-        ).first()
+    
+    # Validation: Check if the .py file actually exists before queueing
+    file_path = f"worker/tasks/{task.title}.py"
+    if not os.path.exists(file_path):
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Task logic file '{task.title}.py' not found. Please upload it first."
+        )
 
-        if task_data:
-            raise HTTPException(status_code=status.HTTP_409_CONFLICT,
-                            detail=f"Task is already registered. Cannot register the same task again")
-        
+    # Salt the payload with a UUID
+    # This ensures that even if the user sends the same 'data'
+    salted_payload = {
+            "data": task.payload,
+            "_run_id": str(uuid.uuid4())
+        }
+
+    # Calculate scheduling
     schedule_time = task.scheduled_at  
     scheduled_for = datetime.now(timezone.utc) + timedelta(minutes=schedule_time)
 
+    # Create the task in Database
     new_task = models.Tasks(
-        **task.model_dump(exclude={"scheduled_at"}),   
+        title=task.title,
+        payload=salted_payload, 
+        priority=task.priority,
         scheduled_at=scheduled_for,                    
         owner_id=current_user.id
     )
-    # create the cache of the new task 
-    cache_task(redis_client,{
+
+    # Cache it
+    cache_task(redis_client, {
         "title": task.title,
         "owner_id": current_user.id,
-        "payload": task.payload
+        "payload": salted_payload
     })
+
     db.add(new_task)
     db.commit()
     db.refresh(new_task)
