@@ -63,10 +63,10 @@ secrets: ## Generate k8s/01-secrets.yaml only if it doesn't exist
 			--from-literal=DATABASE_URL=postgresql://postgres:password@taskflow-pgbouncer:6432/taskflow_db \
 			--dry-run=client -o yaml > k8s/01-secrets.yaml; \
 		echo "---" >> k8s/01-secrets.yaml; \
-		# 2. Redis Secret \
+		# 2. Redis Secret (No password for KEDA compatibility) \
 		kubectl create secret generic taskflow-redis-secret \
 			--namespace=$(NAMESPACE) \
-			--from-literal=REDIS_PASSWORD=test_password \
+			--from-literal=REDIS_PASSWORD="" \
 			--from-literal=REDIS_HOST_HIGH=redis-high \
 			--from-literal=REDIS_PORT_HIGH=6379 \
 			--from-literal=REDIS_HOST_LOW=redis-low \
@@ -105,16 +105,20 @@ pull: ## Pull Docker images from GHCR
 	@docker pull $(REPO)/taskflow-queue-manager:$(TAG) > /dev/null
 	@echo "   Pull Complete!"
 
-build-local-api: ## Build Docker image of api locally
-	@echo "$(MSG_COLOR)Building Images Locally...$(RESET)"
+build-local: ## Build Docker images locally in parallel
+	@echo "$(MSG_COLOR)Building Images Locally (Parallel)...$(RESET)"
+	@docker build --no-cache -t $(REPO)/taskflow-api:$(TAG) -f api/Dockerfile . & \
+	docker build --no-cache -t $(REPO)/taskflow-worker:$(TAG) -f worker/Dockerfile . & \
+	docker build --no-cache -t $(REPO)/taskflow-queue-manager:$(TAG) -f core/Dockerfile . & \
+	wait
+	@echo "$(MSG_COLOR)All builds complete!$(RESET)"
+
+build-local-sequential: ## Build Docker images locally one by one (slower but safer)
+	@echo "$(MSG_COLOR)Building Images Sequentially...$(RESET)"
 	@echo "   Building API..."
 	@docker build --no-cache -t $(REPO)/taskflow-api:$(TAG) -f api/Dockerfile .
-
-build-local-worker: ## Build docker image of worker locally
 	@echo "   Building Worker..."
 	@docker build --no-cache -t $(REPO)/taskflow-worker:$(TAG) -f worker/Dockerfile .
-
-build-local-queue-manager: ## build docker image of queue manager locally 
 	@echo "   Building Queue Manager..."
 	@docker build --no-cache -t $(REPO)/taskflow-queue-manager:$(TAG) -f core/Dockerfile .
 	@echo "   Build Complete!"

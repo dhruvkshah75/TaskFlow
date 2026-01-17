@@ -225,17 +225,45 @@ class QueueManager:
 
                 logger.info(f"Scheduler found {len(candidates)} tasks.")
 
-                # Try push each candidate to Redis, collect IDs that succeeded
-                queued_ids = []
+                # Batch push tasks to Redis by priority
+                high_priority_tasks = []
+                low_priority_tasks = []
+                
                 for task in candidates:
                     payload = {"task_id": task.id}
-                    # use the task.priority if present or default to 'low'
                     priority = getattr(task, "priority", "low") or "low"
-                    success = push_task("default", payload, priority=priority)
-                    if success:
-                        queued_ids.append(task.id)
+                    
+                    if priority == "high":
+                        high_priority_tasks.append((task.id, json.dumps(payload)))
                     else:
-                        logger.error(f"Failed to push task {task.id} to Redis; leaving status PENDING")
+                        low_priority_tasks.append((task.id, json.dumps(payload)))
+                
+                # Batch push to Redis using pipeline
+                queued_ids = []
+                
+                if high_priority_tasks:
+                    try:
+                        r_high = get_redis_client("high")
+                        pipe = r_high.pipeline()
+                        for task_id, json_payload in high_priority_tasks:
+                            pipe.rpush("default", json_payload)
+                        pipe.execute()
+                        queued_ids.extend([tid for tid, _ in high_priority_tasks])
+                        logger.info(f"Batch pushed {len(high_priority_tasks)} high-priority tasks to Redis")
+                    except Exception as e:
+                        logger.error(f"Failed to batch push high-priority tasks: {e}")
+                
+                if low_priority_tasks:
+                    try:
+                        r_low = get_redis_client("low")
+                        pipe = r_low.pipeline()
+                        for task_id, json_payload in low_priority_tasks:
+                            pipe.rpush("default", json_payload)
+                        pipe.execute()
+                        queued_ids.extend([tid for tid, _ in low_priority_tasks])
+                        logger.info(f"Batch pushed {len(low_priority_tasks)} low-priority tasks to Redis")
+                    except Exception as e:
+                        logger.error(f"Failed to batch push low-priority tasks: {e}")
 
                 # Batch-update DB for all queued ids
                 if queued_ids:

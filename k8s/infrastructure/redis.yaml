@@ -33,7 +33,7 @@ spec:
       containers:
         - name: redis
           image: redis:7 
-          command: ["redis-server", "--requirepass", "$(REDIS_PASSWORD)"]
+          command: ["redis-server"]  # No authentication for KEDA compatibility
           ports: 
             - containerPort: 6379
           env:
@@ -88,7 +88,7 @@ spec:
       containers:
         - name: redis
           image: redis:7-alpine
-          command: ["redis-server", "--requirepass", "$(REDIS_PASSWORD)"]
+          command: ["redis-server"]  # No authentication for KEDA compatibility
           ports:
             - containerPort: 6379
           env:

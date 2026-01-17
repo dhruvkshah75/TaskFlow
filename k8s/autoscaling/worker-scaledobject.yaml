@@ -6,22 +6,16 @@ metadata:
 spec:
   scaleTargetRef:
     name: worker               # Must match metadata.name in worker.yaml
-  minReplicaCount: 1           # Keep 1 worker running (set to 0 for serverless)
+  minReplicaCount: 2           # Keep 2 workers running (was 1)
   maxReplicaCount: 20          # Matches 'MAX_WORKERS' in your ConfigMap
-  pollingInterval: 5           # Check Redis every 5 seconds
+  pollingInterval: 2           # Check Redis every 2 seconds (was 5)
   cooldownPeriod: 30           # Wait 30s after queue is empty to scale down
   
   triggers:
   - type: redis
     metadata:
-      # We use the Full DNS name to be safe
       address: redis-high.taskflow.svc.cluster.local:6379
-      # The exact Redis List name your worker listens to.
-      # Based on your ConfigMap, this is "default"
       listName: default 
-      # Matches 'QUEUE_LENGTH_THRESHOLD' from your ConfigMap
-      # Target: 10 items per pod. (100 items = 10 pods)
-      listLength: "10"
-    
-    authenticationRef:
-      name: keda-redis-auth    # Links to the auth file above
+      listLength: "5"
+      databaseIndex: "0"
+      enableTLS: "false"
