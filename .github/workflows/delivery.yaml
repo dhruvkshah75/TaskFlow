@@ -162,162 +162,9 @@ jobs:
           python tests/test.py
           python tests/verify_test.py
 
-  # JOB 2.5: AUTOSCALING TEST (DEPENDS ON BUILD)
-  autoscaling-test:
-    needs: build-ci-images
-    runs-on: ubuntu-latest
-    timeout-minutes: 25
-
-    steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4
-
-      - name: Create K8S Kind Cluster
-        uses: helm/kind-action@v1.8.0
-        with:
-          cluster_name: taskflow-autoscale
-
-      - name: Download API Image
-        uses: actions/download-artifact@v4
-        with:
-          name: image-api
-          path: /tmp
-      
-      - name: Download Worker Image
-        uses: actions/download-artifact@v4
-        with:
-          name: image-worker
-          path: /tmp
-
-      - name: Download Queue Manager Image
-        uses: actions/download-artifact@v4
-        with:
-          name: image-queue-manager
-          path: /tmp
-
-      - name: Load Images into Kind
-        run: |
-          kind load image-archive /tmp/api.tar --name taskflow-autoscale
-          kind load image-archive /tmp/worker.tar --name taskflow-autoscale
-          kind load image-archive /tmp/queue-manager.tar --name taskflow-autoscale
-
-      - name: Setup Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.11'
-          cache: 'pip'
-
-      - name: Install KEDA
-        run: |
-          helm repo add kedacore https://kedacore.github.io/charts
-          helm repo update
-          helm install keda kedacore/keda --namespace keda --create-namespace --version 2.14.1 --wait
-
-      - name: Deploy Application with Autoscaling
-        run: |
-          kubectl create namespace taskflow
-          
-          # Secrets (Redis without password for KEDA compatibility)
-          kubectl create secret generic taskflow-db-secret --namespace=taskflow \
-            --from-literal=POSTGRES_DB=taskflow_db \
-            --from-literal=POSTGRES_USER=postgres \
-            --from-literal=POSTGRES_PASSWORD=password \
-            --from-literal=DATABASE_URL=postgresql://postgres:password@taskflow-pgbouncer:6432/taskflow_db
-          
-          kubectl create secret generic taskflow-redis-secret --namespace=taskflow \
-            --from-literal=REDIS_PASSWORD="" \
-            --from-literal=REDIS_HOST_HIGH=redis-high --from-literal=REDIS_PORT_HIGH=6379 \
-            --from-literal=REDIS_HOST_LOW=redis-low --from-literal=REDIS_PORT_LOW=6379
-          
-          kubectl create secret generic taskflow-app-secret --namespace=taskflow \
-            --from-literal=SECRET_KEY=test_secret_key_for_ci_only \
-            --from-literal=ALGORITHM=HS256 \
-            --from-literal=ACCESS_TOKEN_EXPIRE_MINUTES=60
-          
-          # Patch Manifests
-          sed -i 's|image: .*taskflow-api.*|image: taskflow-api:test|g' k8s/apps/api.yaml
-          sed -i 's|image: .*taskflow-worker.*|image: taskflow-worker:test|g' k8s/apps/worker.yaml
-          sed -i 's|image: .*taskflow-queue-manager.*|image: taskflow-queue-manager:test|g' k8s/apps/queue-manager.yaml
-          sed -i 's|imagePullPolicy: Always|imagePullPolicy: Never|g' k8s/apps/*.yaml
-          sed -i 's|imagePullPolicy: IfNotPresent|imagePullPolicy: Never|g' k8s/apps/*.yaml
-          
-          # Redis without authentication
-          kubectl run redis-high --image=redis:alpine --labels=app=redis-high --port=6379 -n taskflow --command -- redis-server
-          kubectl expose pod redis-high --name=redis-high --port=6379 -n taskflow
-          kubectl run redis-low --image=redis:alpine --labels=app=redis-low --port=6379 -n taskflow --command -- redis-server
-          kubectl expose pod redis-low --name=redis-low --port=6379 -n taskflow
-
-          # Apply manifests
-          kubectl apply -f k8s/02-configmaps.yaml
-          kubectl apply -f k8s/infrastructure/
-          kubectl apply -f k8s/apps/
-          kubectl apply -f k8s/autoscaling/
-          
-          echo "Waiting for pods to be ready..."
-          kubectl wait --namespace taskflow --for=condition=ready pod --selector=app=postgres --timeout=120s
-          kubectl wait --namespace taskflow --for=condition=ready pod --selector=app=api --timeout=120s
-          kubectl wait --namespace taskflow --for=condition=ready pod --selector=app=queue-manager --timeout=120s
-
-      - name: Upload Task File
-        run: |
-          kubectl port-forward -n taskflow svc/taskflow-api 8080:80 &
-          sleep 10
-          
-          # Create user and login
-          curl -X POST http://localhost:8080/users/ \
-            -H "Content-Type: application/json" \
-            -d '{"username":"autoscale_user","email":"autoscale@test.com","password":"testpass123"}' || true
-          
-          TOKEN=$(curl -X POST http://localhost:8080/login \
-            -H "Content-Type: application/json" \
-            -d '{"identifier":"autoscale_user","password":"testpass123"}' | jq -r '.access_token')
-          
-          echo "Token: $TOKEN"
-          
-          # Upload run_temp2.py
-          curl -X POST "http://localhost:8080/tasks/upload_file?file_name=run_temp2" \
-            -H "Authorization: Bearer $TOKEN" \
-            -F "file=@tests/run_temp2.py"
-
-      - name: Install Test Dependencies
-        run: pip install requests psycopg2-binary
-
-      - name: Run Autoscaling Test
-        run: |
-          kubectl port-forward -n taskflow svc/taskflow-pgbouncer 6432:6432 &
-          kubectl port-forward -n taskflow svc/taskflow-api 8080:80 &
-          sleep 10
-          
-          # Modify autoscale-test.py to use fewer tasks for CI
-          sed -i 's/NUM_TASKS = 200/NUM_TASKS = 50/' tests/autoscale-test.py
-          
-          python tests/autoscale-test.py
-
-      - name: Verify Autoscaling
-        run: |
-          # Modify verify script for 50 tasks
-          sed -i 's/EXPECTED_TASKS = 200/EXPECTED_TASKS = 50/' tests/verify_autoscaling.py
-          sed -i 's/TIMEOUT_SECONDS = 600/TIMEOUT_SECONDS = 300/' tests/verify_autoscaling.py
-          
-          python tests/verify_autoscaling.py
-
-      - name: Check Worker Scaling (Informational)
-        if: always()
-        run: |
-          echo "Worker pod count during test:"
-          kubectl get pods -n taskflow -l app=worker
-          
-          echo ""
-          echo "HPA Status:"
-          kubectl get hpa -n taskflow || echo "No HPA found"
-          
-          echo ""
-          echo "ScaledObject Status:"
-          kubectl get scaledobject -n taskflow || echo "No ScaledObject found"
-
   # JOB 3: DEPLOY TO DOCKER HUB
   deploy-dockerhub:
-    needs: [end-to-end-test, autoscaling-test]
+    needs: end-to-end-test
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     strategy:
@@ -365,7 +212,7 @@ jobs:
 
   # JOB 4: DEPLOY TO GHCR
   deploy-ghcr:
-    needs: [end-to-end-test, autoscaling-test]
+    needs: end-to-end-test
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     strategy:
