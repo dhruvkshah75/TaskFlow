@@ -1,4 +1,4 @@
-from fastapi import HTTPException, status, APIRouter, Depends, Response
+from fastapi import HTTPException, status, APIRouter, Depends, Response, UploadFile, File, Query
 from ..oauth2 import get_current_user
 from core.database import get_db
 from core import models
@@ -8,7 +8,7 @@ from typing import List, Optional
 from ..rate_limiter import user_rate_limiter
 from ..utils import cache_task, check_cache_task
 from core.redis_client import get_redis
-import redis, logging
+import redis, logging, shutil, os
 from datetime import datetime, timezone, timedelta
 
 logger = logging.getLogger(__name__)
@@ -149,7 +149,75 @@ def delete_task(task_id: int, db: Session=Depends(get_db),
 
 
 
-@router.put("/{task_id}", response_model=schemas.TaskResponse)
-def update_task(task_id: int, db: Session=Depends(get_db),
-                current_user: models.User = Depends(get_current_user)):
-    pass
+# ==================================== UPLOADING A TASK FILE ===============================================
+
+UPLOAD_DIR = "worker/tasks"
+os.makedirs(UPLOAD_DIR, exist_ok=True)
+
+# file_name: Uses a Query parameter. The user will call it like ?file_name=p1
+@router.post("/upload_file", status_code=status.HTTP_201_CREATED, 
+             dependencies=[Depends(user_rate_limiter)])
+async def upload_task_file(
+    file_name: str = Query(..., description="The title that will be used to trigger this code"),
+    file: UploadFile = File(...), 
+    current_user: models.User = Depends(get_current_user)
+):
+    """
+
+    """
+    # Validation: Only allow Python files
+    if not file.filename.endswith(".py"):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, 
+            detail="Only .py files are allowed"
+        )
+
+    # Define the path: Use task_title as the unique filename
+    # This ensures the worker knows exactly which file to look for by title
+    file_path = os.path.join(UPLOAD_DIR, f"{file_name}.py")
+
+    # Save the file to the shared volume
+    try:
+        with open(file_path, "wb") as buffer:
+            shutil.copyfileobj(file.file, buffer)
+    except Exception as e:
+        logger.error(f"Upload failed: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, 
+            detail="Failed to save the task file"
+        )
+
+    return {"message": f"Logic for task '{file_name}' uploaded successfully"}
+
+
+
+
+
+
+# ### 1. Using `curl` (Command Line)
+# This is the most likely way a developer will test your system.
+# * The `-H` flag sends your JWT token.
+# * The `-F` flag (Form) tells curl to upload a file. The `@` symbol is crucial—it tells curl to look for a file on the local disk.
+
+# curl -X POST "http://localhost:8000/tasks/upload_file?file_name=email_processor" \
+#      -H "Authorization: Bearer YOUR_ACCESS_TOKEN" \
+#      -F "file=@/path/to/your/local_script.py"
+
+
+# ### 2. Using Python `requests`
+# If the user is building their own client or a dashboard to interact with your platform, they would do this:
+
+# import requests
+# url = "http://localhost:8000/tasks/upload_file"
+# params = {"file_name": "email_processor"}
+# headers = {"Authorization": "Bearer YOUR_ACCESS_TOKEN"}
+
+# # The dictionary key 'file' must match the variable name in your FastAPI function
+# with open("local_script.py", "rb") as f:
+#     files = {"file": f}
+#     response = requests.post(url, params=params, headers=headers, files=files)
+
+# print(response.json())
+
+
+
