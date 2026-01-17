@@ -44,6 +44,8 @@ services:
     read_only: false
     security_opt:
       - no-new-privileges:true
+    volumes:
+      - ./worker/tasks:/app/worker/tasks  # Maps local folder to container
 
   worker:
     build:
@@ -64,6 +66,8 @@ services:
       replicas: 4
     security_opt:
       - no-new-privileges:true
+    volumes:
+      - ./worker/tasks:/app/worker/tasks
 
   queue_manager:
     build:
@@ -87,6 +91,8 @@ services:
       - taskflow_net
     security_opt:
       - no-new-privileges:true
+    volumes:
+      - ./worker/tasks:/app/worker/tasks
 
   postgres:
     image: postgres:15

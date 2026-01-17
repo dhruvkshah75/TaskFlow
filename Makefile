@@ -16,7 +16,7 @@ LOG_WORKER := \033[32m    # Green
 LOG_MANAGER := \033[35m   # Magenta
 ERROR := \033[31m         # Red
 
-.PHONY: all help run run-local start-minikube setup secrets login pull build-local load apply install-keda tunnel wait forward stop clean logs logs-api logs-worker logs-manager watch-scaling db-shell stress prune
+.PHONY: all help run run-local start-minikube setup secrets login pull build-local-api build-local-worker build-local-queue-manager load apply install-keda tunnel wait forward stop clean logs logs-api logs-worker logs-manager watch-scaling db-shell stress prune
 
 # --- Main Commands ---
 
@@ -29,7 +29,7 @@ help: ## Show this help message
 # Sequence: Start -> Setup -> Secrets -> PULL -> Load -> Apply -> Tunnel -> Wait -> Forward
 run: start-minikube setup secrets pull load apply tunnel wait forward ## Start project (Pull from Registry)
 
-run-local: start-minikube setup secrets build-local load apply tunnel wait forward ## Start project (Build locally)
+run-local: start-minikube setup secrets build-local-api build-local-worker build-local-queue-manager load apply tunnel wait forward ## Start project (Build locally)
 
 # --- Individual Steps ---
 
@@ -105,12 +105,16 @@ pull: ## Pull Docker images from GHCR
 	@docker pull $(REPO)/taskflow-queue-manager:$(TAG) > /dev/null
 	@echo "   Pull Complete!"
 
-build-local: ## Build Docker images locally
+build-local-api: ## Build Docker image of api locally
 	@echo "$(MSG_COLOR)Building Images Locally...$(RESET)"
 	@echo "   Building API..."
 	@docker build --no-cache -t $(REPO)/taskflow-api:$(TAG) -f api/Dockerfile .
+
+build-local-worker: ## Build docker image of worker locally
 	@echo "   Building Worker..."
 	@docker build --no-cache -t $(REPO)/taskflow-worker:$(TAG) -f worker/Dockerfile .
+
+build-local-queue-manager: ## build docker image of queue manager locally 
 	@echo "   Building Queue Manager..."
 	@docker build --no-cache -t $(REPO)/taskflow-queue-manager:$(TAG) -f core/Dockerfile .
 	@echo "   Build Complete!"
