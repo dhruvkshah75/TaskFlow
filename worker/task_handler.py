@@ -69,13 +69,8 @@ async def execute_dynamic_task(task_title: str, payload: dict) -> Any:
         else:
             result = handler(payload)
         
-        # Cleanup: Delete the task file after successful execution
-        cleanup_task_file(task_title)
-        
         return result
 
     except Exception as e:
         logger.error(f"Runtime error in {task_title}: {e}")
-        # Also cleanup on failure
-        cleanup_task_file(task_title)
         raise e
