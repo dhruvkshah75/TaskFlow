@@ -124,23 +124,23 @@
                         User((👤 User)) --> |"POST /tasks"| API
 
                         %% API -> Redis Low
-                        API -.-> |"Cache / Rate Limit"| RedisLow
+                        API -.-> |"Cache / Rate Limit"| RedisHigh
 
                         %% API -> Redis
                         API --> |"PUSH task"| PgBouncer
 
                         %% Queue Manager 
                         QueueManager -->|Tasks QUEUED| PgBouncer
-                        QueueManager -->|PUSH Task| RedisHigh
+                        QueueManager -->|PUSH Task| RedisLow
                         
                         %% KEDA -> Redis (Monitoring)
-                        KEDA -.-> |"Checks Queue Depth"| RedisHigh
+                        KEDA -.-> |"Checks Queue Depth"| RedisLow
                         
                         %% KEDA -> Worker (Scaling)
                         KEDA -.-> |"Scales Deployment"| Worker
                         
                         %% Worker -> Redis (Fetching)
-                        Worker --> |"POP Task"| RedisHigh
+                        Worker --> |"POP Task"| RedisLow
                         
                         %% Worker/API -> PgBouncer
                         Worker --> |"Connection Pool"| PgBouncer
