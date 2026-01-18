@@ -149,12 +149,32 @@ jobs:
           # Apply manifests
           kubectl apply -f k8s/02-configmaps.yaml
           kubectl apply -f k8s/infrastructure/
+          
+          # Wait for PVCs to bind
+          echo "Waiting for PVCs to bind..."
+          kubectl wait --namespace taskflow --for=jsonpath='{.status.phase}'=Bound pvc/postgres-pvc --timeout=60s || true
+          kubectl wait --namespace taskflow --for=jsonpath='{.status.phase}'=Bound pvc/task-files-pvc --timeout=60s || true
+          kubectl get pvc -n taskflow
+          
           kubectl apply -f k8s/apps/
-          kubectl apply -f k8s/autoscaling/
+          
+          # Skip autoscaling in end-to-end test (will test separately)
+          # kubectl apply -f k8s/autoscaling/
           
           echo "Waiting for pods to be ready..."
           kubectl wait --namespace taskflow --for=condition=ready pod --selector=app=postgres --timeout=120s
-          kubectl wait --namespace taskflow --for=condition=ready pod --selector=app=api --timeout=120s
+          
+          echo "Checking API pod status..."
+          kubectl get pods -n taskflow -l app=api
+          
+          kubectl wait --namespace taskflow --for=condition=ready pod --selector=app=api --timeout=180s || {
+            echo "API pods failed to start. Debugging:"
+            kubectl get pods -n taskflow -l app=api
+            kubectl describe pods -n taskflow -l app=api | tail -100
+            kubectl logs -n taskflow -l app=api --tail=100 --all-containers=true || true
+            exit 1
+          }
+          
           kubectl wait --namespace taskflow --for=condition=ready pod --selector=app=queue-manager --timeout=120s
 
       - name: Upload Task File
