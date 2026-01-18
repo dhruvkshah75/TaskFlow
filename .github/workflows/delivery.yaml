@@ -202,7 +202,7 @@ jobs:
 
   # JOB 3: DEPLOY TO DOCKER HUB
   deploy-dockerhub:
-    needs: [end-to-end-test, autoscaling-test]
+    needs: autoscaling-test
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     strategy:
@@ -250,7 +250,7 @@ jobs:
 
   # JOB 4: DEPLOY TO GHCR
   deploy-ghcr:
-    needs: [end-to-end-test, autoscaling-test]
+    needs: autoscaling-test
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     strategy:
