@@ -140,6 +140,10 @@ jobs:
           sed -i 's|imagePullPolicy: Always|imagePullPolicy: Never|g' k8s/apps/*.yaml
           sed -i 's|imagePullPolicy: IfNotPresent|imagePullPolicy: Never|g' k8s/apps/*.yaml
           
+          # Remove task-files PVC mount from API (not needed for basic test, causes RWX issues in Kind)
+          sed -i '/task-files-volume/,+2d' k8s/apps/api.yaml
+          sed -i '/task-files-pvc/,+3d' k8s/apps/api.yaml
+          
           # Redis without authentication
           kubectl run redis-high --image=redis:alpine --labels=app=redis-high --port=6379 -n taskflow --command -- redis-server
           kubectl expose pod redis-high --name=redis-high --port=6379 -n taskflow
@@ -152,8 +156,8 @@ jobs:
           
           # Wait for PVCs to bind
           echo "Waiting for PVCs to bind..."
-          kubectl wait --namespace taskflow --for=jsonpath='{.status.phase}'=Bound pvc/postgres-pvc --timeout=60s || true
-          kubectl wait --namespace taskflow --for=jsonpath='{.status.phase}'=Bound pvc/task-files-pvc --timeout=60s || true
+          kubectl wait --namespace taskflow --for=jsonpath='{.status.phase}'=Bound pvc/postgres-pvc --timeout=60s
+          # Task files PVC is not critical for basic end-to-end test
           kubectl get pvc -n taskflow
           
           kubectl apply -f k8s/apps/
