@@ -107,20 +107,20 @@ pull: ## Pull Docker images from GHCR
 
 build-local: ## Build Docker images locally in parallel
 	@echo "$(MSG_COLOR)Building Images Locally (Parallel)...$(RESET)"
-	@docker build --no-cache -t $(REPO)/taskflow-api:$(TAG) -f api/Dockerfile . & \
-	docker build --no-cache -t $(REPO)/taskflow-worker:$(TAG) -f worker/Dockerfile . & \
-	docker build --no-cache -t $(REPO)/taskflow-queue-manager:$(TAG) -f core/Dockerfile . & \
+	@docker build -t $(REPO)/taskflow-api:$(TAG) -f api/Dockerfile . & \
+	docker build -t $(REPO)/taskflow-worker:$(TAG) -f worker/Dockerfile . & \
+	docker build -t $(REPO)/taskflow-queue-manager:$(TAG) -f core/Dockerfile . & \
 	wait
 	@echo "$(MSG_COLOR)All builds complete!$(RESET)"
 
 build-local-sequential: ## Build Docker images locally one by one (slower but safer)
 	@echo "$(MSG_COLOR)Building Images Sequentially...$(RESET)"
 	@echo "   Building API..."
-	@docker build --no-cache -t $(REPO)/taskflow-api:$(TAG) -f api/Dockerfile .
+	@docker build -t $(REPO)/taskflow-api:$(TAG) -f api/Dockerfile .
 	@echo "   Building Worker..."
-	@docker build --no-cache -t $(REPO)/taskflow-worker:$(TAG) -f worker/Dockerfile .
+	@docker build -t $(REPO)/taskflow-worker:$(TAG) -f worker/Dockerfile .
 	@echo "   Building Queue Manager..."
-	@docker build --no-cache -t $(REPO)/taskflow-queue-manager:$(TAG) -f core/Dockerfile .
+	@docker build -t $(REPO)/taskflow-queue-manager:$(TAG) -f core/Dockerfile .
 	@echo "   Build Complete!"
 
 load: ## Load pulled images into Minikube

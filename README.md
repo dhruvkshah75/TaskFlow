@@ -52,19 +52,97 @@
 
 ## Overview
 
-**TaskFlow** is a robust, production-ready distributed task queue system built to handle asynchronous background processing at scale. Designed with a microservices architecture, it reliably manages, schedules, and executes jobs across multiple concurrent worker nodes with built-in auto-scaling capabilities.
+**TaskFlow v2.0.0** is a production-ready distributed task execution platform with **dynamic code execution** and **intelligent autoscaling**. Upload custom Python tasks at runtime and execute them across a fleet of auto-scaling workers—no container rebuilds required.
 
-The system leverages **FastAPI** for high-performance task submission and monitoring, **Redis** for efficient message brokering and state management, and **PostgreSQL** for durable persistence of task history and results. By implementing the "Competing Consumers" pattern, TaskFlow ensures load balancing and fault tolerance—if one worker fails, others seamlessly pick up the load.
+The system leverages **FastAPI** for high-performance task submission, **Redis** for message brokering, **PostgreSQL** for persistence, and **KEDA** for event-driven autoscaling based on queue depth.
 
 **Key Capabilities:**
-* **One-Command Deployment:** Automated Makefile system deploys the full Kubernetes stack with `make run`
-* **Distributed Processing:** Horizontally scalable worker nodes process tasks in parallel
-* **Reliable Scheduling:** Intelligent task distribution with Redis-based locking to prevent race conditions
-* **Production Ready:** Docker Compose and Kubernetes deployments with automated CI/CD pipelines
-* **Persistent & Observable:** Complete audit trail of task states (Queued → Processing → Completed/Failed) via REST endpoints
-* **Auto-Scaling:** KEDA-powered autoscaling based on Redis queue depth (0 to 50+ workers dynamically)
-* **Continuous Integration:** Automated end-to-end stress testing with 200+ concurrent tasks validation
-* **Interactive Showcase:** Live demo website with project overview and system architecture
+* **Modular Workers:** Upload and execute custom Python code dynamically without redeploying
+* **Smart Autoscaling:** KEDA scales workers 2-20 pods based on real-time Redis queue length  
+* **Dual-Priority Queues:** Separate high/low priority Redis queues with intelligent routing
+* **Async Support:** Execute both `def handler()` and `async def handler()` functions
+* **Persistent Storage:** Shared task files across API and worker pods (ReadWriteMany PVC)
+* **Production Ready:** Kubernetes-native with automated CI/CD, health checks, and graceful shutdowns
+* **One-Command Deploy:** Full stack deployment with `make run-local`
+
+---
+
+## What's New in v2.0.0
+
+### Modular Worker Architecture
+Workers dynamically load and execute user-uploaded Python code at runtime:
+
+**1. Upload Your Task:**
+```bash
+curl -X POST "http://localhost:8080/tasks/upload_file?file_name=process_data" \
+  -H "Authorization: Bearer TOKEN" \
+  -F "file=@process_data.py"
+```
+
+**2. Define Your Handler:**
+```python
+# process_data.py
+async def handler(payload):
+    """Your custom logic - can be sync or async"""
+    data = payload.get("data", {})
+    # Your processing logic here...
+    return {"status": "success", "result": data}
+```
+
+**3. Create Tasks:**
+```bash
+curl -X POST "http://localhost:8080/tasks/" \
+  -H "Authorization: Bearer TOKEN" \
+  -d '{
+    "title": "process_data",
+    "payload": "{\"data\": {...}}",
+    "priority": "low",
+    "scheduled_at": 0
+  }'
+```
+
+**4. Workers Auto-Scale & Execute:**
+- Queue builds up → Workers scale from 2 to 20 pods
+- Each worker loads `process_data.py` and executes `handler()`
+- Results stored in database
+- Queue empties → Workers scale back to 2 pods
+
+**Task Requirements:**
+- Must contain `handler(payload)` function (sync or async)
+- Task `title` must match filename (without `.py`)
+- Payload passed as dictionary to handler
+
+---
+
+## Quick Start
+
+### Prerequisites
+- [Minikube](https://minikube.sigs.k8s.io/docs/start/) installed
+- [kubectl](https://kubernetes.io/docs/tasks/tools/) CLI tool  
+- [Docker](https://docs.docker.com/get-docker/)
+- [Helm](https://helm.sh/docs/intro/install/) (for KEDA installation)
+
+### Deploy in 3 Commands
+
+```bash
+# 1. Install KEDA (autoscaling operator)
+make install-keda
+
+# 2. Deploy full stack (builds images, deploys to Minikube)
+make run-local
+
+# 3. Access the API
+open http://localhost:8080/docs
+```
+
+**What gets deployed:**
+- FastAPI server (2 replicas) with file upload support
+- PostgreSQL + PgBouncer for connection pooling
+- Redis (high/low priority queues)
+- Queue Manager (batch task processing)
+- Workers (2-20 auto-scaling pods)
+- KEDA ScaledObject (monitors Redis queue)
+- Persistent volume for shared task files
 
 ---
 
@@ -87,31 +165,6 @@ The system leverages **FastAPI** for high-performance task submission and monito
 
 -----
 
-## CI/CD & Testing
-
-TaskFlow includes automated continuous integration with comprehensive end-to-end testing:
-
-### **Automated Stress Testing**
-- **Workflow**: Triggered on every push to main (excluding README changes)
-- **Test Coverage**: Deploys full Kubernetes stack with 200+ concurrent task submissions
-- **Validation**: Automated verification of task processing, database persistence, and worker scaling
-- **Caching**: Docker layer caching for faster builds (~50% reduction in CI time)
-
-### **Run Tests Locally**
-```bash
-# Using Makefile (recommended)
-make stress     # Submit 200 concurrent tasks
-
-# Or directly with Python
-python tests/stress-test.py
-```
-
-View CI/CD workflows in `.github/workflows/`:
-- `ci.yaml` - Standard integration tests
-- `ci-caching.yaml` - Optimized workflow with Docker and pip caching
-- `delivery.yaml` - Complete CI/CD pipeline with parallel jobs for building Docker images and deploying to Docker Hub and GHCR registry with end-to-end testing
-
------
 
 ## Kubernetes Deployment (Minikube)
 
@@ -153,17 +206,40 @@ The Makefile provides a complete set of utilities for managing your local Kubern
 
 | Command | Description |
 |---------|-------------|
-| `make run` | **Start everything.** Full deployment pipeline (pull → load → apply → forward). |
-| `make stop` | **Pause.** Stops Minikube and tunnels (data preserved in cluster). |
+| `make run-local` | **Full local deployment.** Builds images, loads to Minikube, deploys all services with autoscaling. |
+| `make build-local` | **Parallel builds.** Builds API, Worker, Queue Manager images simultaneously (3x faster). |
+| `make build-local-sequential` | **Sequential builds.** Builds images one-by-one (safer for limited resources). |
+| `make load` | Load Docker images into Minikube cluster. |
+| `make apply` | Deploy all Kubernetes manifests (ConfigMaps, Infrastructure, Apps, Autoscaling). |
 | `make clean` | **Reset.** Deletes the `taskflow` namespace and all resources (**data lost**). |
-| `make restart` | **Refresh.** Equivalent to `make clean && make run`. |
-| `make logs` | Stream **color-coded logs** from all services (API: cyan, Workers: green, Queue Manager: magenta). |
-| `make db-shell` | Connect to PostgreSQL with an interactive `psql` session. |
-| `make status` | Show running pods, services, and deployments in the `taskflow` namespace. |
-| `make watch-scaling` | Monitor worker autoscaling in real-time. |
-| `make stress` | Submit 200 concurrent tasks to stress test the system. |
-| `make secrets` | Regenerate `k8s/01-secrets.yaml` with default development credentials (only if missing). |
-| `make prune` | Free up disk space by deleting Docker build cache and dangling images. |
+| `make restart` | **Refresh.** Equivalent to `make clean && make run-local`. |
+| `make forward` | Start port forwarding (API: 8080, PgBouncer: 6432). |
+| `make stop` | Stop Minikube tunnel and port forwarding. |
+
+#### **Development & Testing**
+
+| Command | Description |
+|---------|-------------|
+| `make logs` | Stream **color-coded logs** from all services (API, Workers, Queue Manager). |
+| `make db-shell` | Connect to PostgreSQL with interactive `psql` session. |
+| `make status` | Show running pods, services, and deployments. |
+| `make watch-scaling` | Monitor worker autoscaling in real-time (HPA + pod count). |
+| `make stress` | Submit 200 concurrent tasks via `tests/stress-test.py`. |
+| `make autoscale-test` | Run autoscaling test (creates 200 tasks, monitors scaling). |
+
+#### **Image Management**
+
+| Command | Description |
+|---------|-------------|
+| `make pull` | Pull pre-built images from GHCR (for production deployment). |
+| `make prune` | Free up disk space by deleting Docker build cache. |
+
+#### **Secrets & Setup**
+
+| Command | Description |
+|---------|-------------|
+| `make secrets` | Generate `k8s/01-secrets.yaml` with development credentials. |
+| `make install-keda` | Install KEDA autoscaling operator via Helm. |
 | `make help` | Display all available commands with descriptions. |
 
 ---
