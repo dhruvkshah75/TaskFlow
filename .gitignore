@@ -9,15 +9,11 @@ TaskFlow/
 taskFlow-prod/
 venv/
 logs/
-README_UPDATED.md
-core/queue_manager.md
-PRODUCTION_ROADMAP.md
-QUICK_START.md
-README_PRODUCTION.md
-DEPLOY_CHECKLIST.md
-PRODUCTION_DEPLOYMENT.md
+
 k8s/01-secrets.yaml
-k8s/ROADMAP.md
-k8s/API_AUTOSCALING.md
-k8s/DIRECTORY_STRUCTURE.md
-TROUBLESHOOTING.md
+
+# Ignore all markdown files
+*.md
+
+# But keep README.md
+!README.md
