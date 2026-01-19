@@ -80,13 +80,20 @@ body::before {
 .logo {
     display: flex;
     align-items: center;
-    gap: 0.5rem;
-    font-size: 1.5rem;
+    gap: 1rem;
+    font-size: 1.75rem;
     font-weight: 800;
 }
 
 .logo-icon {
     font-size: 2rem;
+}
+
+.logo-img {
+    height: 55px;
+    width: auto;
+    object-fit: contain;
+    filter: drop-shadow(0 0 10px rgba(245, 158, 11, 0.3));
 }
 
 .logo-text {
