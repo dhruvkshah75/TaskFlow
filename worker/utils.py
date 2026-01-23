@@ -1,4 +1,4 @@
-from sqlalchemy import create_all, update
+from sqlalchemy import update
 from core.database import SessionLocal # Adjust based on your path
 from core.models import Tasks 
 
