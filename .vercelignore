@@ -1,0 +1,5 @@
+pyproject.toml
+debian/
+taskflow_cli/
+venv/
+*.deb
