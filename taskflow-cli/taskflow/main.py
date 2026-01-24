@@ -3,6 +3,10 @@ import time
 import sys
 import signal
 from rich.console import Console
+from prompt_toolkit import PromptSession
+from prompt_toolkit.history import FileHistory
+from prompt_toolkit.styles import Style
+from pathlib import Path
 from .cli import app as cli_app
 
 console = Console()
@@ -88,15 +92,30 @@ def main(ctx: typer.Context):
 
 
 def interactive_mode():
-    """Run CLI in interactive loop mode."""
+    """Run CLI in interactive loop mode with command history support."""
     import shlex
     from rich.prompt import Confirm
     from rich.table import Table
     
+    # Setup command history file
+    history_file = Path.home() / ".taskflow" / "history"
+    history_file.parent.mkdir(exist_ok=True)
+    
+    # Create prompt session with history
+    session = PromptSession(history=FileHistory(str(history_file)))
+    
+    # Custom style for the prompt
+    prompt_style = Style.from_dict({
+        'prompt': 'cyan bold',
+    })
+    
     while True:
         try:
-            # Prompt for command
-            user_input = console.input("[bold cyan]taskflow>[/] ")
+            # Prompt for command with history support
+            user_input = session.prompt(
+                [('class:prompt', 'taskflow> ')],
+                style=prompt_style
+            )
             
             if not user_input.strip():
                 continue
@@ -187,6 +206,7 @@ def display_help():
     table.add_row("  <filepath>", "  Path to the .py file to upload")
     table.add_row("  --title <name> (required)", "  Task name to use when creating tasks")
     table.add_row("delete-file --title <name>", "Delete an uploaded task file")
+    table.add_row("list-worker-files", "List task files in worker pod (/app/worker/tasks)")
     
     # Built-in commands
     table.add_row("", "")

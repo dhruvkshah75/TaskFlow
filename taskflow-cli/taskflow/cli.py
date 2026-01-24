@@ -343,6 +343,12 @@ def delete_file(
         console.print(f"\n[bold green]✓[/] {result['message']}")
     elif response and response.status_code == 404:
         console.print(f"\n[bold red]✗[/] Task file '{title}.py' not found")
+    elif response and response.status_code == 422:
+        try:
+            error_detail = response.json()
+            console.print(f"\n[bold red]✗[/] Validation error: {error_detail}")
+        except:
+            console.print(f"\n[bold red]✗[/] Validation error (422): Please check the file name")
     elif response:
         error = response.json().get("detail", "Failed to delete file")
         console.print(f"\n[bold red]✗[/] Failed to delete file: {error}")
@@ -351,61 +357,62 @@ def delete_file(
 
 
 @app.command()
-def whoami():
-    """Display current login status."""
-    token = get_token()
+def list_worker_files():
+    """List all task files in the worker pod's tasks folder (/app/worker/tasks)."""
+    import subprocess
     
-    if token:
-        console.print("\n[bold green]✓[/] You are logged in")
-        console.print(f"[dim]Token stored securely in system keyring[/]")
-        
-        # Try to get user info
-        response = api_request("GET", "/tasks/", params={"limit": 1})
-        if response is None:
-
-            console.print("\n[bold red]✗[/] Could not connect to TaskFlow API")
-
-        elif response.status_code == 200:
-            console.print("[dim]Connection to API: Active[/]")
-        else:
-            console.print("[yellow]Warning: Token may be expired or invalid[/]")
-    else:
-        console.print("\n[yellow]You are not logged in[/]")
-        console.print("[dim]Run:[/] taskflow login")
-
-
-@app.command()
-def config(
-    show: bool = typer.Option(False, "--show", help="Show current configuration"),
-    api_url: str = typer.Option(None, "--api-url", help="Set the API URL")
-):
-    """Configure CLI settings."""
-    config_file = Path.home() / ".taskflow" / "config.json"
-    config_file.parent.mkdir(exist_ok=True)
+    namespace = "taskflow"
     
-    if show:
-        if config_file.exists():
-            with open(config_file, "r") as f:
-                cfg = json.load(f)
-            console.print("\n[bold]Current Configuration:[/]")
-            for key, value in cfg.items():
-                console.print(f"  [cyan]{key}:[/] {value}")
-        else:
-            console.print("\n[yellow]No configuration file found[/]")
-            console.print(f"[dim]Default API URL:[/] {os.getenv('TASKFLOW_API_URL', 'http://localhost:8000')}")
-        return
+    console.print(f"\n[bold cyan]Fetching task files from worker pod...[/]")
     
-    if api_url:
-        cfg = {}
-        if config_file.exists():
-            with open(config_file, "r") as f:
-                cfg = json.load(f)
+    try:
+        get_pod_cmd = f"kubectl get pods -n {namespace} -l app=worker -o jsonpath='{{.items[0].metadata.name}}'"
+        result = subprocess.run(get_pod_cmd, shell=True, capture_output=True, text=True)
+        if result.returncode != 0:
+            console.print(f"\n[bold red]✗[/] Failed to get worker pod: {result.stderr}")
+            return
+        pod = result.stdout.strip()
+        if not pod:
+            console.print(f"\n[bold red]✗[/] No worker pods found in namespace '{namespace}'")
+            return
         
-        cfg["api_url"] = api_url
-        os.environ["TASKFLOW_API_URL"] = api_url
+        console.print(f"[dim]Using pod:[/] {pod}")
         
-        with open(config_file, "w") as f:
-            json.dump(cfg, f, indent=2)
+        cmd = f"kubectl exec -n {namespace} {pod} -- ls -la /app/worker/tasks"
+        result = subprocess.run(cmd, shell=True, capture_output=True, text=True)
         
-        console.print(f"\n[bold green]✓[/] API URL set to: {api_url}")
+        if result.returncode != 0:
+            console.print(f"\n[bold red]✗[/] Failed to list files: {result.stderr}")
+            return
+        
+        files = []
+        for line in result.stdout.strip().split('\n'):
+            if line and not line.startswith('total') and '.py' in line:
+                parts = line.split()
+                if len(parts) >= 9:
+                    filename = parts[-1]
+                    if filename != '__init__.py':
+                        files.append(filename)
+        
+        if not files:
+            console.print("\n[yellow]No task files found in the worker's tasks folder.[/]")
+            console.print(f"\n[dim]Raw output:[/]\n{result.stdout}")
+            return
+        
+        table = Table(title=f"\n[bold]Worker Task Files[/] ({len(files)} found)")
+        table.add_column("File Name", style="cyan")
+        table.add_column("Title", style="magenta")
+        
+        for file in files:
+            title = file.replace(".py", "")
+            table.add_row(file, title)
+        
+        console.print(table)
+        
+    except FileNotFoundError:
+        console.print("\n[bold red]✗[/] kubectl command not found. Please ensure kubectl is installed and in your PATH.")
+    except Exception as e:
+        console.print(f"\n[bold red]✗[/] Error: {str(e)}")
+
+
 

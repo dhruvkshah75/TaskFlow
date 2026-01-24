@@ -1,6 +1,6 @@
 import time
 
-def handler(payload):
+def handler(payload: str):
     """
     Simple task that adds two numbers and sleeps for 2 seconds.
     Used for CI/CD autoscaling tests.

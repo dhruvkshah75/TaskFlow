@@ -103,6 +103,47 @@ def get_a_task(task_id: int, db: Session=Depends(get_db),
         return task
 
 
+@router.delete("/delete_file", status_code=status.HTTP_200_OK,
+               dependencies=[Depends(user_rate_limiter)])
+async def delete_task_file(
+    file_name: str = Query(..., description="The name of the task file to delete", min_length=1),
+    current_user: models.User = Depends(get_current_user)
+):
+    """
+    Delete a task file from the shared PVC volume.
+    This endpoint allows users to cleanup uploaded task files when they are no longer needed.
+    The file will be permanently removed from the persistent storage shared by all API and Worker pods.
+    
+    ### Parameters:
+    - **file_name**: The name/title of the task file to delete (without .py extension)
+    ### Response:
+    - **200 OK**: File successfully deleted from PVC (affects all pods)
+    - **404 Not Found**: File doesn't exist
+    - **500 Internal Server Error**: Failed to delete the file
+    """
+    logger.info(f"Delete file request for: {file_name} by user: {current_user.username}")
+    file_path = os.path.join(UPLOAD_DIR, f"{file_name}.py")
+    
+    # Check if file exists
+    if not os.path.exists(file_path):
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Task file '{file_name}.py' not found"
+        )
+    
+    # Delete the file
+    try:
+        os.remove(file_path)
+        logger.info(f"User {current_user.username} deleted task file: {file_name}.py from shared PVC")
+        return {"message": f"Task file '{file_name}.py' deleted successfully from all pods"}
+    except Exception as e:
+        logger.error(f"Failed to delete file {file_name}.py: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to delete task file: {str(e)}"
+        )
+
+
 @router.delete("/{task_id}", status_code=status.HTTP_204_NO_CONTENT, 
                dependencies = [Depends(user_rate_limiter)])
 def delete_task(task_id: int, db: Session=Depends(get_db),
@@ -137,7 +178,7 @@ def delete_task(task_id: int, db: Session=Depends(get_db),
 
 # ==================================== UPLOADING A TASK FILE ===============================================
 
-UPLOAD_DIR = "worker/tasks"
+UPLOAD_DIR = "/app/worker/tasks"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 # file_name: Uses a Query parameter. The user will call it like ?file_name=p1
@@ -204,46 +245,6 @@ async def upload_task_file(
         return {"message": f"Logic for task '{file_name}' updated successfully (overwrote existing file)"}
     else:
         return {"message": f"Logic for task '{file_name}' uploaded successfully"}
-
-
-
-@router.delete("/delete_file", status_code=status.HTTP_200_OK,
-               dependencies=[Depends(user_rate_limiter)])
-async def delete_task_file(
-    file_name: str = Query(..., description="The name of the task file to delete"),
-    current_user: models.User = Depends(get_current_user)
-):
-    """
-    Delete a task file from the shared volume.
-    This endpoint allows users to cleanup uploaded task files when they are no longer needed.
-    The file will be permanently removed from the persistent storage.
-    ### Parameters:
-    - **file_name**: The name/title of the task file to delete (without .py extension)
-    ### Response:
-    - **200 OK**: File successfully deleted
-    - **404 Not Found**: File doesn't exist
-    - **500 Internal Server Error**: Failed to delete the file
-    """
-    file_path = os.path.join(UPLOAD_DIR, f"{file_name}.py")
-    
-    # Check if file exists
-    if not os.path.exists(file_path):
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Task file '{file_name}.py' not found"
-        )
-    
-    # Delete the file
-    try:
-        os.remove(file_path)
-        logger.info(f"User {current_user.username} deleted task file: {file_name}.py")
-        return {"message": f"Task file '{file_name}.py' deleted successfully"}
-    except Exception as e:
-        logger.error(f"Failed to delete file {file_name}.py: {e}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to delete task file: {str(e)}"
-        )
 
 
 
