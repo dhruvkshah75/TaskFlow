@@ -4,19 +4,18 @@ import json
 import signal
 import asyncio
 import os
-import sys
 
 # Core imports
 from core.redis_client import get_async_redis_client
 from .heartbeat import HeartbeatService
 from .task_handler import execute_dynamic_task
-# Import the new database helper
+# Import the updated database helper that supports worker_id
 from .utils import update_task_status 
 
 # Ensure logs directory exists
 os.makedirs("logs", exist_ok=True)
 
-# Logging matches your Victus environment
+# Logging configuration matches your Victus environment
 logging.basicConfig(
     level=logging.INFO, 
     format='%(asctime)s - [Worker] - %(levelname)s - %(message)s',
@@ -32,6 +31,7 @@ PROCESSING_QUEUE = f"processing:{QUEUE_NAME}"
 
 class AsyncWorker:
     def __init__(self):
+        # Generate a unique short ID for this worker instance
         self.worker_id = str(uuid.uuid4())[:8]
         self.running = True
         self.redis_high = None
@@ -39,28 +39,24 @@ class AsyncWorker:
         self.heartbeat = HeartbeatService(self.worker_id)
 
     async def start(self):
-        logger.info(f"Async worker:{self.worker_id} starting up on modular-worker branch...")
+        logger.info(f"Async worker:{self.worker_id} starting up on TaskFlow cluster...")
         
         self.redis_high = await get_async_redis_client("high")
         self.redis_low = await get_async_redis_client("low")
+        
+        # Start the heartbeat so the Leader knows this worker is alive
         await self.heartbeat.start()
 
-        logger.info(f"Worker:{self.worker_id} listening for dynamic tasks on Redis.")
+        logger.info(f"Worker:{self.worker_id} listening for tasks on Redis.")
         
         while self.running:
             try:
                 raw_data = None
-                # Priority-based Redis polling
-                if hasattr(self.redis_high, 'blmove'):
-                    raw_data = await self.redis_high.blmove(QUEUE_NAME, PROCESSING_QUEUE, 'RIGHT', 'LEFT', 1)
-                else:
-                    raw_data = await self.redis_high.brpoplpush(QUEUE_NAME, PROCESSING_QUEUE, 1)
+                # Atomically move task from main queue to processing queue
+                raw_data = await self.redis_high.brpoplpush(QUEUE_NAME, PROCESSING_QUEUE, 1)
                 
                 if not raw_data:
-                    if hasattr(self.redis_low, 'blmove'):
-                        raw_data = await self.redis_low.blmove(QUEUE_NAME, PROCESSING_QUEUE, 'RIGHT', 'LEFT', 1)
-                    else:
-                        raw_data = await self.redis_low.brpoplpush(QUEUE_NAME, PROCESSING_QUEUE, 1)
+                    raw_data = await self.redis_low.brpoplpush(QUEUE_NAME, PROCESSING_QUEUE, 1)
 
                 if raw_data:
                     try:
@@ -72,29 +68,28 @@ class AsyncWorker:
 
                     task_id = data.get('task_id')
                     task_title = data.get('title')
-                    payload = data.get('payload') # The JSONB salted dictionary
+                    payload = data.get('payload') 
 
-                    logger.info(f"Worker:{self.worker_id} processing Dynamic Task: {task_id}")
+                    logger.info(f"Worker:{self.worker_id} claiming Task: {task_id}")
 
                     try:
-                        # 1. UPDATE DB: Mark as starting
-                        await update_task_status(task_id, "IN_PROGRESS")
+                        # --- THE CRITICAL FIX ---
+                        # Pass self.worker_id so the Leader's PEL scanner sees this task is claimed
+                        await update_task_status(task_id, "IN_PROGRESS", self.worker_id)
 
-                        # 2. EXECUTE: Load and run the uploaded script
+                        # Execute the dynamically loaded script
                         result = await execute_dynamic_task(task_title, payload)
                         
                         logger.info(f"Task {task_id} COMPLETED successfully.")
-                        
-                        # 3. UPDATE DB: Mark as success with result
-                        await update_task_status(task_id, "COMPLETED", result=json.dumps(result))
+                        await update_task_status(task_id, "COMPLETED")
                         
                     except Exception as e:
                         logger.error(f"Execution failed for Task {task_id}: {str(e)}")
-                        
-                        # 4. UPDATE DB: Mark as failed with error message
-                        await update_task_status(task_id, "FAILED", result=str(e))
+                        # Mark as failed in DB
+                        await update_task_status(task_id, "FAILED")
                     
                     finally:
+                        # Task is finished (success or fail), remove from processing queue
                         await self._remove_from_processing(raw_data)
 
             except Exception as e:
@@ -103,12 +98,13 @@ class AsyncWorker:
                     await asyncio.sleep(2)
 
         # Shutdown Logic
-        logger.info(f"Worker:{self.worker_id} shutting down...")
+        logger.info(f"Worker:{self.worker_id} gracefully shutting down...")
         await self.heartbeat.stop()
         if self.redis_low: await self.redis_low.aclose()
         if self.redis_high: await self.redis_high.aclose()
 
     async def _remove_from_processing(self, raw_data):
+        """Clean up the processing queue in both Redis instances"""
         try:
             await self.redis_low.lrem(PROCESSING_QUEUE, 0, raw_data)
             await self.redis_high.lrem(PROCESSING_QUEUE, 0, raw_data)
@@ -116,6 +112,7 @@ class AsyncWorker:
             logger.exception("Failed to remove item from processing queue")
 
     async def _cleanup_malformed(self, raw_data):
+        """Remove messages that cannot be parsed as JSON"""
         try:
             await self.redis_low.lrem(PROCESSING_QUEUE, 0, raw_data)
             await self.redis_high.lrem(PROCESSING_QUEUE, 0, raw_data)
@@ -128,6 +125,7 @@ class AsyncWorker:
 async def main():
     worker = AsyncWorker()
     loop = asyncio.get_running_loop()
+    # Handle OS signals for clean shutdown in Kubernetes
     for sig in (signal.SIGINT, signal.SIGTERM):
         loop.add_signal_handler(sig, worker.request_shutdown)
     await worker.start()

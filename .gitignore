@@ -17,3 +17,5 @@ k8s/01-secrets.yaml
 
 # But keep README.md
 !README.md
+
+taskflow-cli/venv
