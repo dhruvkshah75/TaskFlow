@@ -78,7 +78,7 @@ class AsyncWorker:
                         await update_task_status(task_id, "IN_PROGRESS", self.worker_id)
 
                         # Execute the dynamically loaded script
-                        result = await execute_dynamic_task(task_title, payload)
+                        await execute_dynamic_task(task_title, payload)
                         
                         logger.info(f"Task {task_id} COMPLETED successfully.")
                         await update_task_status(task_id, "COMPLETED")

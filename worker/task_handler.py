@@ -3,10 +3,12 @@ import importlib.util
 import os
 import logging
 import inspect
+import asyncio
 from typing import Callable, Optional, Tuple, Any
 
 logger = logging.getLogger(__name__)
 TASKS_DIR = "/app/worker/tasks"
+TASK_TIMEOUT_SECONDS = 180  # 3 minutes
 
 
 def load_task_handler(task_title: str) -> Tuple[Optional[Callable], Optional[str]]:
@@ -47,16 +49,36 @@ async def execute_dynamic_task(task_title: str, payload: dict) -> Any:
     if error:
         raise Exception(f"Loading Error: {error}")
 
+    # DEBUG: Log the payload type and content
+    logger.info(f"[DEBUG] Payload type: {type(payload)}")
+    logger.info(f"[DEBUG] Payload content: {payload}")
+
     try:
-        # --- FIX FOR ASYNC/SYNC CONFLICT ---
-        # Check if the user's handler is async or a regular function
-        if inspect.iscoroutinefunction(handler):
-            result = await handler(payload)
-        else:
-            result = handler(payload)
+        # --- TIMEOUT PROTECTION ---
+        # Wrap task execution with a timeout to prevent infinite loops
+        logger.info(f"Starting task '{task_title}' with {TASK_TIMEOUT_SECONDS}s timeout")
         
+        if inspect.iscoroutinefunction(handler):
+            # Async handler with timeout
+            result = await asyncio.wait_for(
+                handler(payload),
+                timeout=TASK_TIMEOUT_SECONDS
+            )
+        else:
+            # Sync handler - run in executor with timeout
+            loop = asyncio.get_event_loop()
+            result = await asyncio.wait_for(
+                loop.run_in_executor(None, handler, payload),
+                timeout=TASK_TIMEOUT_SECONDS
+            )
+        
+        logger.info(f"Task '{task_title}' completed successfully")
         return result
 
+    except asyncio.TimeoutError:
+        error_msg = f"Task '{task_title}' exceeded {TASK_TIMEOUT_SECONDS}s timeout and was terminated"
+        logger.error(error_msg)
+        raise Exception(error_msg)
     except Exception as e:
         logger.error(f"Runtime error in {task_title}: {e}")
         raise e
