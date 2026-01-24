@@ -1,0 +1,27 @@
+#!/bin/bash
+set -e
+
+# PostRemove script for taskflow-cli
+# This runs after the package is removed
+
+if [ "$1" = "purge" ]; then
+    echo "Cleaning up TaskFlow resources..."
+    
+    # Ask user if they want to delete the namespace
+    read -p "Do you want to delete the taskflow namespace and all resources? (y/N): " -n 1 -r
+    echo
+    if [[ $REPLY =~ ^[Yy]$ ]]; then
+        kubectl delete namespace taskflow --ignore-not-found=true
+        echo "Namespace deleted."
+    else
+        echo "Namespace preserved. To delete manually: kubectl delete namespace taskflow"
+    fi
+    
+    # Clean up user data
+    rm -rf ~/.taskflow
+    echo "User data cleaned up."
+fi
+
+echo "TaskFlow CLI removed."
+
+exit 0

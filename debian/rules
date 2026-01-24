@@ -1,0 +1,23 @@
+#!/usr/bin/make -f
+
+%:
+	dh $@ --with python3 --buildsystem=pybuild
+
+override_dh_auto_clean:
+	dh_auto_clean
+	rm -rf build *.egg-info
+
+override_dh_auto_install:
+	dh_auto_install
+	# Install the CLI script
+	install -D -m 755 taskflow_cli/run_cli.py debian/taskflow-cli/usr/bin/taskflow
+	# Install k8s manifests
+	mkdir -p debian/taskflow-cli/usr/share/taskflow-cli
+	cp -r k8s debian/taskflow-cli/usr/share/taskflow-cli/
+
+override_dh_fixperms:
+	dh_fixperms
+	# Make maintainer scripts executable
+	chmod 755 debian/taskflow-cli/DEBIAN/postinst || true
+	chmod 755 debian/taskflow-cli/DEBIAN/prerm || true
+	chmod 755 debian/taskflow-cli/DEBIAN/postrm || true

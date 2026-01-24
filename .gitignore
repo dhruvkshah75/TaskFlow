@@ -19,3 +19,14 @@ k8s/01-secrets.yaml
 !README.md
 
 taskflow-cli/venv
+
+# Debian build artifacts (but keep debian/ source files)
+debian/taskflow-cli/
+debian/.debhelper/
+debian/files
+debian/*.substvars
+debian/*.log
+debian/debhelper-build-stamp
+*.deb
+*.changes
+*.buildinfo
