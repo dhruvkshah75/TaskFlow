@@ -1,9 +1,0 @@
-taskflow-cli (2.1.0-1) unstable; urgency=medium
-
-  * Initial release
-  * Interactive CLI with command history
-  * Task management features
-  * File upload and management
-  * User authentication
-
- -- Dhruv Shah <dhruvkshah75@gmail.com>  Fri, 24 Jan 2026 22:49:00 +0000

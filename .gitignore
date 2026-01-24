@@ -20,13 +20,23 @@ k8s/01-secrets.yaml
 
 taskflow-cli/venv
 
-# Debian build artifacts (but keep debian/ source files)
-debian/taskflow-cli/
-debian/.debhelper/
-debian/files
-debian/*.substvars
-debian/*.log
-debian/debhelper-build-stamp
+# Debian packaging - keep it out of git, distribute via releases
+debian/
 *.deb
+*.dsc
+*.tar.xz
 *.changes
 *.buildinfo
+build/
+.pybuild/
+*.egg-info/
+
+# Keep releases folder for local organization
+!releases/
+releases/*.deb
+
+
+install-build-deps.sh
+clean-build.sh
+
+debian/
