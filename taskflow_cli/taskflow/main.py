@@ -9,6 +9,7 @@ from prompt_toolkit.styles import Style
 from pathlib import Path
 from .cli import app as cli_app
 
+
 console = Console()
 app = typer.Typer()
 

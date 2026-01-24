@@ -1,0 +1,38 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "taskflow"
+version = "2.1.0"
+description = "A distributed task orchestrator CLI for TaskFlow"
+readme = "README.md"
+requires-python = ">=3.8"
+authors = [
+    { name = "Dhruv Shah", email = "dhruvkshah75@gmail.com" }
+]
+
+
+dependencies = [
+    "requests==2.32.5",
+    "rich==14.2.0",
+    "rich-pixels==3.0.1",
+    "typer==0.21.1",
+    "pillow==12.1.0",
+    "click==8.3.1",
+    "shellingham==1.5.4",
+    "prompt-toolkit==3.0.48",
+    "typing_extensions==4.15.0"
+]
+
+[project.scripts]
+taskflow = "taskflow_cli.run_cli:main"
+
+[tool.setuptools]
+packages = ["taskflow_cli"]
+
+[tool.setuptools.package-data]
+"*" = ["k8s/*.yaml"]
+
+[tool.setuptools.exclude-package-data]
+"*" = ["venv/*", "__pycache__/*", "*.pyc"]
