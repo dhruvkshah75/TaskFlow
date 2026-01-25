@@ -18,7 +18,7 @@ spec:
       containers:
         - name: worker
           image: ghcr.io/dhruvkshah75/taskflow-worker:latest
-          imagePullPolicy: Never 
+          imagePullPolicy: IfNotPresent 
           
           volumeMounts:
             - name: task-files

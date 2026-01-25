@@ -17,6 +17,7 @@ spec:
       containers:
       - name: queue-manager
         image: ghcr.io/dhruvkshah75/taskflow-queue-manager:latest
+        imagePullPolicy: IfNotPresent
           # Load ALL Configs and Secrets (It needs Redis to route tasks and DB to check status)
         envFrom:
           - configMapRef:
