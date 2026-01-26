@@ -101,7 +101,7 @@ jobs:
           kind load image-archive /tmp/queue-manager.tar --name taskflow-autoscale
 
       - name: Setup Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v6
         with:
           python-version: '3.11'
           cache: 'pip'
