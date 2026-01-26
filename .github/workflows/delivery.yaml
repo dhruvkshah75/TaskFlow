@@ -77,19 +77,19 @@ jobs:
           cluster_name: taskflow-autoscale
 
       - name: Download API Image
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           name: image-api
           path: /tmp
       
       - name: Download Worker Image
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           name: image-worker
           path: /tmp
 
       - name: Download Queue Manager Image
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           name: image-queue-manager
           path: /tmp
