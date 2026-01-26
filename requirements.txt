@@ -32,7 +32,7 @@ passlib==1.7.4
 pluggy==1.6.0
 prometheus_client==0.23.1
 psycopg2-binary==2.9.11
-pyasn1==0.6.1
+pyasn1==0.6.2
 pydantic==2.12.4
 pydantic-extra-types==2.10.6
 pydantic-settings==2.12.0
