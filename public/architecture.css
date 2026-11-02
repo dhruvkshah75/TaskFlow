@@ -118,20 +118,10 @@
 .edge-packet {
   fill: #ef9a72;
   opacity: 0;
-  animation: map-packet 6s var(--curve) infinite;
-  offset-rotate: 0deg;
+  pointer-events: none;
 }
-.edge-packet.delay-1 {
-  animation-delay: 1s;
-}
-.edge-packet.delay-2 {
-  animation-delay: 2s;
-}
-.edge-packet.delay-3 {
-  animation-delay: 3s;
-}
-.edge-packet.delay-4 {
-  animation-delay: 4s;
+.edge-packet.priority {
+  fill: #b7d4a8;
 }
 .map-label {
   fill: #97988c;
@@ -222,21 +212,91 @@
   height: 80px;
 }
 .node-pods {
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(10, 1fr);
   gap: 4px;
   margin-top: 4px;
 }
 .node-pods i {
   display: block;
-  width: 12px;
-  height: 12px;
+  height: 10px;
   border: 1px solid #777a64;
   border-radius: 2px;
+  opacity: 0.3;
+  transform: scale(0.75);
+  transition:
+    transform 0.5s var(--curve),
+    opacity 0.3s var(--curve),
+    background-color 0.3s var(--curve);
 }
-.node-pods i:first-child,
-.node-pods i:nth-child(2) {
+.node-pods i.active {
   background: #b7d4a8;
   border-color: #b7d4a8;
+  opacity: 1;
+  transform: scale(1);
+}
+.node-pods i.busy {
+  background: #ef9a72;
+  border-color: #ef9a72;
+}
+.node-worker.is-scaling {
+  border-color: #b7d4a8;
+}
+.map-simulation {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 16px 32px;
+  background: #272727;
+}
+.simulation-story {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.simulation-note {
+  color: #aaa99f;
+}
+.simulation-metrics {
+  display: flex;
+  gap: 32px;
+  margin: 0;
+}
+.simulation-metrics div {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.simulation-metrics dt {
+  color: #aaa99f;
+}
+.simulation-metrics dd {
+  margin: 0;
+  color: #b7d4a8;
+  font-variant-numeric: tabular-nums;
+}
+#simulation-phase {
+  color: #ef9a72;
+}
+#map-worker-count {
+  color: #b7d4a8;
+}
+#map-pause:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+@media (max-width: 760px) {
+  .map-simulation {
+    padding: 16px;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 16px;
+  }
+  .simulation-metrics {
+    justify-content: space-between;
+    gap: 16px;
+  }
 }
 .map-boundary {
   position: absolute;
@@ -496,31 +556,6 @@
 }
 .arch-closing {
   margin-top: 96px;
-}
-.map-paused .edge-packet {
-  animation-play-state: paused;
-}
-.map-paused .edge-packet {
-  opacity: 0;
-}
-@keyframes map-packet {
-  0%,
-  8% {
-    offset-distance: 0%;
-    opacity: 0;
-  }
-  12% {
-    opacity: 1;
-  }
-  80% {
-    offset-distance: 100%;
-    opacity: 1;
-  }
-  90%,
-  100% {
-    offset-distance: 100%;
-    opacity: 0;
-  }
 }
 @media (min-width: 1200px) {
   .map-canvas {

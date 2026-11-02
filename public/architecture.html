@@ -224,31 +224,6 @@
                   </text>
                   <text class="map-label" x="706" y="384">queue depth</text>
                   <text class="map-label" x="848" y="464">05 / SCALE</text>
-                  <circle
-                    r="3"
-                    class="edge-packet"
-                    style="offset-path: path(&quot;M172 260 H210&quot;)"
-                  />
-                  <circle
-                    r="3"
-                    class="edge-packet delay-1"
-                    style="offset-path: path(&quot;M282 300 V400 H400&quot;)"
-                  />
-                  <circle
-                    r="3"
-                    class="edge-packet delay-2"
-                    style="offset-path: path(&quot;M480 360 V160&quot;)"
-                  />
-                  <circle
-                    r="3"
-                    class="edge-packet delay-3"
-                    style="offset-path: path(&quot;M528 160 V260 H612&quot;)"
-                  />
-                  <circle
-                    r="3"
-                    class="edge-packet delay-4"
-                    style="offset-path: path(&quot;M772 260 H840&quot;)"
-                  />
                 </svg>
                 <button
                   class="map-node node-client"
@@ -286,23 +261,30 @@
                   aria-pressed="false"
                 >
                   <span class="node-name">Redis · high</span
-                  ><span class="node-meta mono">priority tasks</span></button
+                  ><span class="node-meta mono" id="high-queued"
+                    >0 queued</span
+                  ></button
                 ><button
                   class="map-node node-low"
                   data-component="low"
                   aria-pressed="false"
                 >
                   <span class="node-name">Redis · low</span
-                  ><span class="node-meta mono">bulk tasks</span></button
+                  ><span class="node-meta mono" id="low-queued"
+                    >0 queued</span
+                  ></button
                 ><button
                   class="map-node node-worker"
                   data-component="worker"
                   aria-pressed="false"
                 >
                   <span class="node-name">Python workers</span
-                  ><span class="node-meta mono">2 → 20 replicas</span
+                  ><span class="node-meta mono"
+                    ><span id="map-worker-count">2</span> / 20 active</span
                   ><span class="node-pods" aria-hidden="true"
-                    ><i></i><i></i><i></i><i></i><i></i><i></i
+                    ><i class="active"></i><i class="active"></i><i></i><i></i
+                    ><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i
+                    ><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i
                   ></span></button
                 ><button
                   class="map-node node-keda"
@@ -310,9 +292,34 @@
                   aria-pressed="false"
                 >
                   <span class="node-name">KEDA</span
-                  ><span class="node-meta mono">observe / scale</span>
+                  ><span class="node-meta mono" id="keda-action"
+                    >baseline capacity</span
+                  >
                 </button>
               </div>
+            </div>
+            <div class="map-simulation">
+              <div class="simulation-story">
+                <span id="simulation-phase" class="caption-4" role="status"
+                  >Ready for the next burst</span
+                ><span class="caption-4 simulation-note"
+                  >160 task burst · timing compressed</span
+                >
+              </div>
+              <dl class="simulation-metrics mono caption-4">
+                <div>
+                  <dt>Queued</dt>
+                  <dd id="simulation-queued">0</dd>
+                </div>
+                <div>
+                  <dt>Workers</dt>
+                  <dd id="simulation-workers">2</dd>
+                </div>
+                <div>
+                  <dt>Completed</dt>
+                  <dd><span id="simulation-completed">0</span> / 160</dd>
+                </div>
+              </dl>
             </div>
             <div class="map-bottom caption-4">
               <span>Select a component to explore its role.</span
