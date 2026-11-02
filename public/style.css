@@ -706,10 +706,12 @@ button:active {
   min-width: 0;
 }
 .command code {
+  flex: 1;
+  min-width: 0;
   overflow: auto;
   font-size: 12px;
   line-height: 20px;
-  white-space: pre;
+  white-space: nowrap;
 }
 .copy {
   background: transparent;

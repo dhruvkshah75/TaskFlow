@@ -144,7 +144,7 @@
     button.addEventListener("click", async () => {
       try {
         await navigator.clipboard.writeText(
-          button.previousElementSibling.textContent,
+          button.previousElementSibling.textContent.replace(/\s+/g, " ").trim(),
         );
         button.textContent = "Copied";
         document.querySelector("#copy-status").textContent =
