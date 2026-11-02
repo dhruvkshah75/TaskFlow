@@ -112,21 +112,13 @@
                   Pause
                 </button>
               </div>
-              <div class="console-code mono" aria-label="Python task example">
-                <span class="code-line code-muted"># You write the work.</span
-                ><span class="code-line"
-                  ><span class="code-orange">async def</span>
-                  <span class="code-green">handler</span>(payload):</span
-                ><span class="code-line">
-                  result =
-                  <span class="code-orange">await</span> process(payload)</span
-                ><span class="code-line">
-                  <span class="code-orange">return</span> {<span
-                    class="code-green"
-                    >"result"</span
-                  >: result}</span
-                >
-              </div>
+              <pre
+                class="console-code mono"
+                aria-label="Python task example"
+              ><code><span class="code-muted"># You write the work.</span>
+<span class="code-orange">async def</span> <span class="code-green">handler</span>(payload):
+    result = <span class="code-orange">await</span> process(payload)
+    <span class="code-orange">return</span> {<span class="code-green">"result"</span>: result}</code></pre>
               <div class="execution">
                 <div class="execution-head caption-4 mono">
                   <span>TaskFlow handles the rest.</span

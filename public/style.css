@@ -350,6 +350,7 @@ button:active {
   background: #313131;
 }
 .console-code {
+  margin: 0;
   padding: 24px;
   line-height: 28px;
   font-size: 14px;
@@ -357,8 +358,8 @@ button:active {
   color: #bcbcb4;
   white-space: pre;
 }
-.console-code .code-line {
-  display: block;
+.console-code code {
+  font: inherit;
 }
 .console-code .code-muted {
   color: #74746c;
