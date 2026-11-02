@@ -1,365 +1,697 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>System Architecture - TaskFlow</title>
-    <link rel="stylesheet" href="architecture.css">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-    
-    <style>
-
-        /* Title inside the yellow box needs to be dark again */
-        .section-title {
-            margin-bottom: 2rem;
-            color: #1f2937 !important; /* Dark Gray Text */
-        }
-
-        /* 2. Grid Fixes */
-        .fault-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); 
-            gap: 2rem;
-            margin-top: 2rem;
-        }
-
-        .component-logo-img {
-            width: 48px;
-            height: 48px;
-            object-fit: contain;
-        }
-
-        .component-header {
-            display: flex;
-            align-items: center;
-            gap: 1rem;
-            margin-bottom: 1rem;
-        }
-    </style>
-
-</head>
-<body>
-    <nav class="navbar">
-        <div class="container nav-container">
-            <div class="logo">
-                <img src="assets/logo1.png" alt="TaskFlow Logo" class="logo-img">
-                <span class="logo-text">TaskFlow</span>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Architecture | Inside TaskFlow</title>
+    <meta
+      name="description"
+      content="Follow a Python task through TaskFlow: FastAPI, PostgreSQL, priority Redis queues, Python workers, and KEDA autoscaling."
+    />
+    <link rel="icon" href="assets/logo1.png" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&family=Geist+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="style.css" />
+    <link rel="stylesheet" href="architecture.css" />
+    <meta property="og:title" content="Architecture | Inside TaskFlow" />
+    <meta
+      property="og:description"
+      content="The path from a Python function to distributed task execution."
+    />
+    <meta
+      property="og:image"
+      content="https://taskflow-io.vercel.app/assets/logo1.png"
+    />
+    <meta name="twitter:card" content="summary" />
+  </head>
+  <body>
+    <div class="relative min-h-screen">
+      <a id="skip-content" class="skip" href="#main">Skip to content</a>
+      <header class="nav-shell">
+        <a
+          id="brand-home"
+          href="index.html"
+          class="brand"
+          aria-label="TaskFlow home"
+          ><img
+            src="assets/logo1.png"
+            alt=""
+            width="32"
+            height="32"
+          />TaskFlow</a
+        >
+        <nav class="nav-links" aria-label="Main navigation">
+          <a id="nav-how" href="index.html#how-it-works">How it works</a
+          ><a id="nav-demo" href="index.html#demo">Demo</a
+          ><a aria-current="page" id="nav-architecture" href="architecture.html"
+            >Architecture ↗</a
+          ><a
+            id="nav-github"
+            class="nav-git"
+            href="https://github.com/dhruvkshah75/TaskFlow"
+            >GitHub ↗</a
+          >
+        </nav>
+        <button
+          class="menu-toggle"
+          aria-expanded="false"
+          aria-controls="mobile-menu"
+          aria-label="Open navigation"
+        >
+          <span></span><span></span>
+        </button>
+      </header>
+      <nav
+        id="mobile-menu"
+        class="mobile-menu"
+        aria-label="Mobile navigation"
+        inert
+      >
+        <a id="mobile-how" href="index.html#how-it-works">How it works</a
+        ><a id="mobile-demo" href="index.html#demo">Demo</a
+        ><a
+          aria-current="page"
+          id="mobile-architecture"
+          href="architecture.html"
+          >Architecture ↗</a
+        ><a id="mobile-github" href="https://github.com/dhruvkshah75/TaskFlow"
+          >GitHub ↗</a
+        >
+      </nav>
+      <main id="main" tabindex="-1">
+        <section class="arch-hero wrap" aria-labelledby="arch-title">
+          <div class="breadcrumbs caption-4 muted">
+            <a id="breadcrumb-home" href="index.html">TaskFlow</a
+            ><span aria-hidden="true">/</span><span>Architecture</span>
+          </div>
+          <div class="arch-hero-grid">
+            <h1 id="arch-title" class="heading-1">
+              A task’s journey.<br />Every moving part.
+            </h1>
+            <div class="arch-intro">
+              <p class="body-7 muted">
+                From a Python function to a fleet of workers. Here’s how
+                TaskFlow moves the work, tracks its state, and responds when
+                things change.
+              </p>
+              <span class="eyebrow orange">A look inside the system</span>
             </div>
-            <div class="nav-links">
-                <a href="index.html">Home</a>
-                <a href="architecture.html" class="active">Architecture</a>
-                <a href="https://github.com/dhruvkshah75/TaskFlow" target="_blank" class="github-link">
-                    <svg class="github-icon" viewBox="0 0 16 16" fill="currentColor">
-                        <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/>
-                    </svg>
-                    GitHub
-                </a>
+          </div>
+          <nav class="arch-jumps" aria-label="On this page">
+            <a id="jump-map" href="#system">01 / System map</a
+            ><a id="jump-lifecycle" href="#lifecycle">02 / Task lifecycle</a
+            ><a id="jump-components" href="#components">03 / Components</a
+            ><a id="jump-scaling" href="#scaling">04 / Scaling</a
+            ><a id="jump-recovery" href="#recovery">05 / Recovery</a>
+          </nav>
+        </section>
+        <section
+          id="system"
+          class="wrap"
+          aria-label="Interactive system architecture"
+        >
+          <div class="system-map">
+            <div class="map-toolbar">
+              <div class="map-toolbar-left">
+                <span class="status-dot"></span>
+                <h2 class="eyebrow">The system, connected</h2>
+              </div>
+              <div class="map-legend caption-4">
+                <span class="legend-key"><i></i> Task flow</span
+                ><span class="legend-key control"><i></i> Scaling signal</span>
+              </div>
+              <button
+                id="map-pause"
+                class="pause caption-4"
+                aria-pressed="false"
+              >
+                Pause
+              </button>
             </div>
+            <div
+              class="map-scroll"
+              tabindex="0"
+              role="region"
+              aria-label="System map. Scroll horizontally on small screens; select a component to read its role."
+            >
+              <div class="map-canvas">
+                <div class="map-boundary"></div>
+                <span class="boundary-label mono caption-4"
+                  >namespace: taskflow</span
+                ><svg viewBox="0 0 1040 512" aria-hidden="true">
+                  <defs>
+                    <marker
+                      id="arrow"
+                      viewBox="0 0 10 10"
+                      refX="9"
+                      refY="5"
+                      markerWidth="5"
+                      markerHeight="5"
+                      orient="auto-start-reverse"
+                    >
+                      <path d="M 0 0 L 10 5 L 0 10 z" fill="#898c78" />
+                    </marker>
+                  </defs>
+                  <path
+                    class="map-edge"
+                    d="M172 260 H210"
+                    marker-end="url(#arrow)"
+                  />
+                  <path
+                    class="map-edge"
+                    d="M282 300 V400 H400"
+                    marker-end="url(#arrow)"
+                  />
+                  <path
+                    class="map-edge"
+                    d="M480 360 V160"
+                    marker-end="url(#arrow)"
+                  />
+                  <path
+                    class="map-edge"
+                    d="M560 120 H612"
+                    marker-end="url(#arrow)"
+                  />
+                  <path
+                    class="map-edge"
+                    d="M528 160 V260 H612"
+                    marker-end="url(#arrow)"
+                  />
+                  <path
+                    class="map-edge"
+                    d="M772 120 H800 V192 H840"
+                    marker-end="url(#arrow)"
+                  />
+                  <path
+                    class="map-edge"
+                    d="M772 260 H840"
+                    marker-end="url(#arrow)"
+                  />
+                  <path
+                    class="map-edge"
+                    d="M904 296 V328 H580 V400 H560"
+                    marker-end="url(#arrow)"
+                  />
+                  <path
+                    class="map-edge map-edge-control"
+                    d="M692 300 V400 H840"
+                    marker-end="url(#arrow)"
+                  />
+                  <path
+                    class="map-edge map-edge-control"
+                    d="M968 360 V296"
+                    marker-end="url(#arrow)"
+                  />
+                  <text class="map-label" x="40" y="208">01 / PRODUCE</text>
+                  <text class="map-label" x="220" y="208">02 / ACCEPT</text>
+                  <text class="map-label" x="408" y="64">03 / DISPATCH</text>
+                  <text class="map-label" x="848" y="136">04 / EXECUTE</text>
+                  <text class="map-label" x="300" y="384">persist</text>
+                  <text
+                    class="map-label"
+                    x="416"
+                    y="278"
+                    transform="rotate(-90 416 278)"
+                  >
+                    poll due tasks
+                  </text>
+                  <text class="map-label" x="604" y="348">
+                    update task status
+                  </text>
+                  <text class="map-label" x="706" y="384">queue depth</text>
+                  <text class="map-label" x="848" y="464">05 / SCALE</text>
+                  <circle
+                    r="3"
+                    class="edge-packet"
+                    style="offset-path: path(&quot;M172 260 H210&quot;)"
+                  />
+                  <circle
+                    r="3"
+                    class="edge-packet delay-1"
+                    style="offset-path: path(&quot;M282 300 V400 H400&quot;)"
+                  />
+                  <circle
+                    r="3"
+                    class="edge-packet delay-2"
+                    style="offset-path: path(&quot;M480 360 V160&quot;)"
+                  />
+                  <circle
+                    r="3"
+                    class="edge-packet delay-3"
+                    style="offset-path: path(&quot;M528 160 V260 H612&quot;)"
+                  />
+                  <circle
+                    r="3"
+                    class="edge-packet delay-4"
+                    style="offset-path: path(&quot;M772 260 H840&quot;)"
+                  />
+                </svg>
+                <button
+                  class="map-node node-client"
+                  data-component="client"
+                  aria-pressed="false"
+                >
+                  <span class="node-name">Your client</span
+                  ><span class="node-meta mono">CLI / REST</span></button
+                ><button
+                  class="map-node node-api"
+                  data-component="api"
+                  aria-pressed="true"
+                >
+                  <span class="node-name">FastAPI</span
+                  ><span class="node-meta mono">2 replicas</span></button
+                ><button
+                  class="map-node node-db"
+                  data-component="database"
+                  aria-pressed="false"
+                >
+                  <span class="node-name">PostgreSQL</span
+                  ><span class="node-meta mono">via PgBouncer</span></button
+                ><button
+                  class="map-node node-manager"
+                  data-component="manager"
+                  aria-pressed="false"
+                >
+                  <span class="node-name">Queue manager</span
+                  ><span class="node-meta mono"
+                    >schedule / recover</span
+                  ></button
+                ><button
+                  class="map-node node-high"
+                  data-component="high"
+                  aria-pressed="false"
+                >
+                  <span class="node-name">Redis · high</span
+                  ><span class="node-meta mono">priority tasks</span></button
+                ><button
+                  class="map-node node-low"
+                  data-component="low"
+                  aria-pressed="false"
+                >
+                  <span class="node-name">Redis · low</span
+                  ><span class="node-meta mono">bulk tasks</span></button
+                ><button
+                  class="map-node node-worker"
+                  data-component="worker"
+                  aria-pressed="false"
+                >
+                  <span class="node-name">Python workers</span
+                  ><span class="node-meta mono">2 → 20 replicas</span
+                  ><span class="node-pods" aria-hidden="true"
+                    ><i></i><i></i><i></i><i></i><i></i><i></i
+                  ></span></button
+                ><button
+                  class="map-node node-keda"
+                  data-component="keda"
+                  aria-pressed="false"
+                >
+                  <span class="node-name">KEDA</span
+                  ><span class="node-meta mono">observe / scale</span>
+                </button>
+              </div>
+            </div>
+            <div class="map-bottom caption-4">
+              <span>Select a component to explore its role.</span
+              ><span class="mono">Conceptual map · not live telemetry</span>
+            </div>
+          </div>
+          <p class="map-scroll-hint caption-4">Swipe the map to explore →</p>
+          <div class="inspector" aria-live="polite" aria-atomic="true">
+            <div class="inspector-title">
+              <span class="inspector-index mono caption-4" id="component-label"
+                >ENTRY POINT</span
+              >
+              <h3 class="title-1" id="component-name">FastAPI</h3>
+            </div>
+            <div class="inspector-copy">
+              <p class="body-3 muted" id="component-description">
+                Authenticates requests, accepts Python file uploads, and
+                persists submitted tasks in PostgreSQL. Dispatch is handled by
+                the queue manager.
+              </p>
+              <a
+                id="component-source"
+                class="text-link inspector-source"
+                href="https://github.com/dhruvkshah75/TaskFlow/blob/main/api/routers/tasks.py"
+                >Read the source ↗</a
+              >
+            </div>
+          </div>
+        </section>
+        <section
+          id="lifecycle"
+          class="section wrap"
+          aria-labelledby="lifecycle-title"
+        >
+          <div class="section-label eyebrow orange">02 / Follow one task</div>
+          <div class="journey-header reveal">
+            <h2 id="lifecycle-title" class="heading-2">
+              A function goes in.<br />The system takes it from there.
+            </h2>
+            <p class="body-3 muted">
+              Walk through the normal execution path. Each stage has one job.
+            </p>
+          </div>
+          <div class="journey-layout">
+            <div
+              class="journey-steps"
+              role="group"
+              aria-label="Task lifecycle stages"
+            >
+              <button class="journey-step" data-step="0" aria-pressed="true">
+                <span class="journey-num mono caption-4">01</span
+                ><span class="title-3"
+                  >Upload the handler<small
+                    >A Python file on shared storage</small
+                  ></span
+                ><span aria-hidden="true">↗</span></button
+              ><button class="journey-step" data-step="1" aria-pressed="false">
+                <span class="journey-num mono caption-4">02</span
+                ><span class="title-3"
+                  >Submit the task<small
+                    >Payload, priority, and schedule</small
+                  ></span
+                ><span aria-hidden="true">↗</span></button
+              ><button class="journey-step" data-step="2" aria-pressed="false">
+                <span class="journey-num mono caption-4">03</span
+                ><span class="title-3"
+                  >Dispatch when it’s due<small
+                    >From PostgreSQL to Redis</small
+                  ></span
+                ><span aria-hidden="true">↗</span></button
+              ><button class="journey-step" data-step="3" aria-pressed="false">
+                <span class="journey-num mono caption-4">04</span
+                ><span class="title-3"
+                  >Claim and execute<small
+                    >Priority checked before bulk work</small
+                  ></span
+                ><span aria-hidden="true">↗</span></button
+              ><button class="journey-step" data-step="4" aria-pressed="false">
+                <span class="journey-num mono caption-4">05</span
+                ><span class="title-3"
+                  >Record the outcome<small
+                    >Task status returns to PostgreSQL</small
+                  ></span
+                ><span aria-hidden="true">↗</span>
+              </button>
+            </div>
+            <article
+              class="journey-detail"
+              aria-live="polite"
+              aria-atomic="true"
+            >
+              <div>
+                <span id="journey-kicker" class="eyebrow orange"
+                  >01 / Shared code, ready to run</span
+                >
+                <h3 id="journey-title" class="heading-3">
+                  Your code has a home.
+                </h3>
+                <p id="journey-description" class="body-3 muted">
+                  Upload a Python file with a handler(payload) function. The API
+                  and workers share the task files volume, so workers can load
+                  new code without an image rebuild.
+                </p>
+                <pre id="journey-code" class="journey-code mono">
+async def handler(payload):
+    return await process(payload)</pre>
+              </div>
+              <div class="state-row">
+                <span class="caption-4 muted">At this stage</span
+                ><span id="journey-state" class="state-chip mono"
+                  >FILE READY</span
+                >
+              </div>
+            </article>
+          </div>
+        </section>
+        <section
+          id="components"
+          class="section layers-section"
+          aria-labelledby="components-title"
+        >
+          <div class="wrap">
+            <div class="section-label eyebrow orange">
+              03 / Small parts, clear responsibilities
+            </div>
+            <div class="layers-intro reveal">
+              <h2 id="components-title" class="heading-2">
+                Each part earns<br />its place.
+              </h2>
+              <p class="body-3 muted">
+                The API accepts work. The scheduler dispatches it. Workers
+                execute it. Redis and PostgreSQL connect the pieces.
+              </p>
+            </div>
+            <div class="layer-row">
+              <span class="mono caption-4 orange">01</span>
+              <div class="layer-title">
+                <h3 class="title-1">Request layer</h3>
+                <span class="caption-4 muted">FastAPI · CLI</span>
+              </div>
+              <p class="body-3 muted">
+                Authentication, uploads, task creation, and status queries
+                through a REST interface.
+              </p>
+              <a
+                id="source-api"
+                class="layer-file"
+                href="https://github.com/dhruvkshah75/TaskFlow/blob/main/api/routers/tasks.py"
+                >api/routers/tasks.py ↗</a
+              >
+            </div>
+            <div class="layer-row">
+              <span class="mono caption-4 orange">02</span>
+              <div class="layer-title">
+                <h3 class="title-1">Coordination layer</h3>
+                <span class="caption-4 muted">Queue manager · Redis</span>
+              </div>
+              <p class="body-3 muted">
+                A leased leader schedules due tasks into high or low priority
+                queues and checks for work needing recovery.
+              </p>
+              <a
+                id="source-manager"
+                class="layer-file"
+                href="https://github.com/dhruvkshah75/TaskFlow/blob/main/core/queue_manager.py"
+                >core/queue_manager.py ↗</a
+              >
+            </div>
+            <div class="layer-row">
+              <span class="mono caption-4 orange">03</span>
+              <div class="layer-title">
+                <h3 class="title-1">Execution layer</h3>
+                <span class="caption-4 muted">Python · AsyncIO</span>
+              </div>
+              <p class="body-3 muted">
+                Workers move tasks to a processing list, load uploaded handlers,
+                and update execution status.
+              </p>
+              <a
+                id="source-worker"
+                class="layer-file"
+                href="https://github.com/dhruvkshah75/TaskFlow/blob/main/worker/main.py"
+                >worker/main.py ↗</a
+              >
+            </div>
+            <div class="layer-row">
+              <span class="mono caption-4 orange">04</span>
+              <div class="layer-title">
+                <h3 class="title-1">Persistence layer</h3>
+                <span class="caption-4 muted"
+                  >PostgreSQL · PgBouncer · PVC</span
+                >
+              </div>
+              <p class="body-3 muted">
+                Task metadata and status live in PostgreSQL. PgBouncer pools
+                connections. A shared volume holds Python files.
+              </p>
+              <a
+                id="source-storage"
+                class="layer-file"
+                href="https://github.com/dhruvkshah75/TaskFlow/blob/main/k8s/infrastructure/postgres.yaml"
+                >infrastructure/postgres.yaml ↗</a
+              >
+            </div>
+          </div>
+        </section>
+        <section
+          id="scaling"
+          class="section wrap scaler-block"
+          aria-labelledby="scaling-title"
+        >
+          <div class="scaler-copy reveal">
+            <div class="section-label eyebrow orange">
+              04 / Capacity follows the queue
+            </div>
+            <h2 id="scaling-title" class="heading-2">
+              A queue gets deeper.<br />A fleet gets bigger.
+            </h2>
+            <p class="body-7 muted">
+              KEDA observes the low priority Redis queue and adjusts the worker
+              deployment between 2 and 20 replicas.
+            </p>
+            <p class="body-3 muted">
+              The current manifest polls every 2 seconds, sets a target list
+              length of 5, and configures a 30 second cooldown. Both priority
+              queues are served by the same worker fleet.
+            </p>
+            <a
+              id="scaling-source"
+              class="text-link"
+              href="https://github.com/dhruvkshah75/TaskFlow/blob/main/k8s/autoscaling/worker-scaledobject.yaml"
+              >Explore the scaling manifest ↗</a
+            >
+          </div>
+          <div class="config-panel reveal">
+            <header class="mono caption-4">
+              <span>worker-scaledobject.yaml</span><span>KEDA</span>
+            </header>
+            <pre class="mono"><span class="config-key">spec:</span>
+  <span class="config-key">minReplicaCount:</span> <span class="config-val">2</span>
+  <span class="config-key">maxReplicaCount:</span> <span class="config-val">20</span>
+  <span class="config-key">pollingInterval:</span> <span class="config-val">2</span>
+  <span class="config-key">cooldownPeriod:</span> <span class="config-val">30</span>
+  <span class="config-key">triggers:</span>
+    - <span class="config-key">type:</span> <span class="config-val">redis</span>
+      <span class="config-key">metadata:</span>
+        <span class="config-key">listName:</span> <span class="config-val">default</span>
+        <span class="config-key">listLength:</span> <span class="config-val">"5"</span></pre>
+            <p class="config-note caption-4">
+              A focused excerpt from the current manifest.
+            </p>
+          </div>
+        </section>
+        <section
+          id="recovery"
+          class="section failure-section"
+          aria-labelledby="recovery-title"
+        >
+          <div class="wrap failure-layout">
+            <div class="reveal">
+              <div class="section-label eyebrow orange">
+                05 / When a part stops
+              </div>
+              <h2 id="recovery-title" class="heading-2">
+                Work can fail.<br />Make it recoverable.
+              </h2>
+              <p class="intro-copy body-3 muted">
+                Heartbeats, leader leases, and reconciliation give the system
+                ways to detect interrupted work. Handlers should tolerate being
+                run again.
+              </p>
+            </div>
+            <div class="failure-cases">
+              <details open>
+                <summary>A worker disappears</summary>
+                <p>
+                  Workers publish heartbeats every 3 seconds with a 10 second
+                  TTL. The queue manager scans running tasks every 10 seconds
+                  and requeues tasks whose worker heartbeat is missing, up to 3
+                  retries.
+                </p>
+                <a
+                  id="recovery-heartbeat"
+                  class="text-link recovery-source"
+                  href="https://github.com/dhruvkshah75/TaskFlow/blob/main/worker/heartbeat.py"
+                  >Inspect heartbeat handling ↗</a
+                >
+              </details>
+              <details>
+                <summary>The queue manager loses leadership</summary>
+                <p>
+                  Leadership uses a Redis lease with a 10 second TTL, renewed
+                  every 3 seconds. A contender can acquire the lock after the
+                  lease expires; the Kubernetes manifest currently runs one
+                  queue manager replica.
+                </p>
+              </details>
+              <details>
+                <summary>The queue and database disagree</summary>
+                <p>
+                  A reconciliation loop republishes queued tasks every 30
+                  seconds. This can produce duplicate delivery, so task handlers
+                  should be idempotent. A separate loop inspects stale entries
+                  in the low priority processing list.
+                </p>
+              </details>
+              <details>
+                <summary>A Python handler raises an error</summary>
+                <p>
+                  The worker marks the task FAILED and removes its message from
+                  the processing list. The dynamic handler wrapper also sets a
+                  180 second timeout. The current worker records task status
+                  rather than persisting the handler’s return value.
+                </p>
+                <a
+                  id="recovery-handler"
+                  class="text-link recovery-source"
+                  href="https://github.com/dhruvkshah75/TaskFlow/blob/main/worker/task_handler.py"
+                  >Inspect handler execution ↗</a
+                >
+              </details>
+            </div>
+          </div>
+        </section>
+        <section class="wrap arch-closing" aria-labelledby="arch-closing-title">
+          <div class="closing reveal">
+            <div>
+              <h2 id="arch-closing-title" class="heading-2">
+                Trace the path.<br />Then run it yourself.
+              </h2>
+              <p class="body-3 muted">
+                The source is open. The next task is yours.
+              </p>
+            </div>
+            <a
+              id="arch-start"
+              class="primary button-md"
+              href="index.html#quickstart"
+              >Run TaskFlow locally
+              <span class="arrow" aria-hidden="true">↗</span></a
+            >
+          </div>
+        </section>
+      </main>
+      <footer class="footer wrap">
+        <div class="footer-main">
+          <a id="footer-brand" href="index.html" class="brand"
+            ><img
+              src="assets/logo1.png"
+              alt=""
+              width="32"
+              height="32"
+            />TaskFlow</a
+          >
+          <nav class="footer-links" aria-label="Footer">
+            <a id="footer-code" href="https://github.com/dhruvkshah75/TaskFlow"
+              >Source ↗</a
+            ><a
+              id="footer-docs"
+              href="https://github.com/dhruvkshah75/TaskFlow/blob/main/README.md"
+              >Documentation ↗</a
+            ><a
+              id="footer-issues"
+              href="https://github.com/dhruvkshah75/TaskFlow/issues"
+              >Issues ↗</a
+            >
+          </nav>
         </div>
-    </nav>
-
-    <section class="hero">
-        <div class="container">
-            <h1 class="hero-title">System Architecture</h1>
-            <p class="hero-subtitle">Deep dive into TaskFlow's distributed, event-driven architecture</p>
+        <div class="footer-bottom caption-4">
+          <span>Built for the work behind the scenes.</span
+          ><a
+            id="footer-license"
+            href="https://github.com/dhruvkshah75/TaskFlow/blob/main/LICENSE"
+            >Open source · MIT license</a
+          >
         </div>
-    </section>
-
-    <section class="architecture-section">
-        <div class="container">
-            <div class="intro-card">
-                <h2>Overview</h2>
-                <p>TaskFlow implements a <strong>Producer-Consumer pattern</strong> with event-driven autoscaling, fault tolerance, and dual-priority task queues. The system is built on Kubernetes with KEDA for dynamic scaling based on queue depth.</p>
-            </div>
-
-            <div class="diagram-section" style="background: #ffffff; padding: 2rem; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); margin: 2rem 0; text-align: center;">
-                <h2 class="section-title" style="margin-bottom: 2rem; color: #1f2937;">System Architecture Flow</h2>
-                
-                <div class="mermaid">
-                    graph TD
-                    
-                    %% --- STYLING ---
-                    classDef k8s fill:#326ce5,stroke:#fff,stroke-width:2px,color:#fff;
-                    classDef db fill:#ffffff,stroke:#336791,stroke-width:2px,color:#333;
-                    classDef redis fill:#ffffff,stroke:#d82c20,stroke-width:2px,color:#333;
-                    classDef component fill:#e1f5fe,stroke:#333,stroke-width:1px;
-                    classDef plain fill:#fff,stroke:#333,stroke-width:1px;
-            
-                    subgraph "Cluster: TaskFlow Namespace"
-                        direction TB
-            
-                        %% --- AUTOSCALING ---
-                        subgraph "Autoscaling Logic"
-                            %% Using Kubernetes Logo for KEDA
-                            KEDA("<img src='https://upload.wikimedia.org/wikipedia/commons/3/39/Kubernetes_logo_without_workmark.svg' width='40' /><br><b>KEDA Operator</b>"):::plain
-                        end
-            
-                        %% --- DATA LAYER ---
-                        subgraph "Data Layer"
-                            %% Redis Logo
-                            RedisHigh("<img src='https://cdn.jsdelivr.net/gh/devicons/devicon/icons/redis/redis-original.svg' width='40' /><br><b>Redis (High)</b>"):::redis
-                            
-                            %% Redis Logo
-                            RedisLow("<img src='https://cdn.jsdelivr.net/gh/devicons/devicon/icons/redis/redis-original.svg' width='40' /><br><b>Redis (Low)</b>"):::redis
-                            
-                            %% Postgres Logo
-                            Postgres("<img src='https://cdn.jsdelivr.net/gh/devicons/devicon/icons/postgresql/postgresql-original.svg' width='40' /><br><b>PostgreSQL</b>"):::db
-                            
-                            %% PgBouncer
-                            PgBouncer("<img src='https://cdn.jsdelivr.net/gh/devicons/devicon/icons/postgresql/postgresql-plain.svg' width='40' /><br><b>PgBouncer</b>"):::db
-                        end
-            
-                        %% --- APP LAYER ---
-                        subgraph "Application Layer"
-                            API[("<b>TaskFlow API</b><br>(2 Replicas)")]:::k8s
-                            QueueManager[("<b>Queue Manager</b><br>(1 Replica)")]:::k8s
-                            Worker[("<b>Worker</b><br>(1-20 Replicas)")]:::k8s
-                        end
-            
-                        %% --- CONNECTIONS ---
-                        
-                        %% User -> API
-                        User((👤 User)) --> |"POST /tasks"| API
-
-                        %% API -> Redis Low
-                        API -.-> |"Cache / Rate Limit"| RedisHigh
-
-                        %% API -> Redis
-                        API --> |"PUSH task"| PgBouncer
-
-                        %% Queue Manager 
-                        QueueManager -->|Tasks QUEUED| PgBouncer
-                        QueueManager -->|PUSH Task| RedisLow
-                        
-                        %% KEDA -> Redis (Monitoring)
-                        KEDA -.-> |"Checks Queue Depth"| RedisLow
-                        
-                        %% KEDA -> Worker (Scaling)
-                        KEDA -.-> |"Scales Deployment"| Worker
-                        
-                        %% Worker -> Redis (Fetching)
-                        Worker --> |"POP Task"| RedisLow
-                        
-                        %% Worker/API -> PgBouncer
-                        Worker --> |"Connection Pool"| PgBouncer
-                        API --> |"GET /status"| PgBouncer
-                        
-                        %% PgBouncer -> Postgres
-                        PgBouncer --> |"Real Connection"| Postgres
-
-                    end
-            
-                    %% Link Styling
-                    linkStyle 0,2,3,4 stroke-width:2px,fill:none,stroke:green
-                    linkStyle 1,5,6 stroke-width:2px,fill:none,stroke:orange,stroke-dasharray:5 5
-                    linkStyle 7 stroke-width:2px,fill:none,stroke:#2563eb
-                </div>
-            </div>
-
-            <div class="components-section">
-                <h2 class="section-title">Core Components</h2>
-                <div class="components-grid">
-                    <div class="component-card">
-                        <div class="component-header">
-                            <span class="component-icon">🌐</span>
-                            <h3>API Gateway</h3>
-                        </div>
-                        <div class="component-tech">
-                            <span class="tech-badge">FastAPI</span>
-                            <span class="tech-badge">Python 3.11</span>
-                        </div>
-                        <ul class="component-features">
-                            <li><strong>Authentication:</strong> JWT token validation</li>
-                            <li><strong>Rate Limiting:</strong> Per-user limits via Redis</li>
-                            <li><strong>Task Submission:</strong> Validates & pushes to Redis</li>
-                            <li><strong>Status Queries:</strong> Returns results from DB</li>
-                        </ul>
-                        <div class="component-k8s">
-                            <code>k8s/apps/api.yaml</code> • 2 replicas
-                        </div>
-                    </div>
-
-                    <div class="component-card">
-                        <div class="component-header">
-                            <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/redis/redis-original.svg" class="component-logo-img" alt="Redis Logo">
-                            <h3>Redis Cluster</h3>
-                        </div>
-                        <div class="component-tech">
-                            <span class="tech-badge">Redis 7</span>
-                            <span class="tech-badge">Dual-Priority</span>
-                        </div>
-                        <ul class="component-features">
-                            <li><strong>redis-high:</strong> Queue for critical tasks</li>
-                            <li><strong>redis-low:</strong> Caching, Rate Limits, Bulk tasks</li>
-                            <li><strong>Operations:</strong> RPUSH, BRPOPLPUSH, LLEN</li>
-                            <li><strong>Leader Election:</strong> SET NX PX for locking</li>
-                        </ul>
-                        <div class="component-k8s">
-                            <code>k8s/infrastructure/redis.yaml</code>
-                        </div>
-                    </div>
-
-                    <div class="component-card">
-                        <div class="component-header">
-                            <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/postgresql/postgresql-original.svg" class="component-logo-img" alt="Postgres Logo">
-                            <h3>PostgreSQL + PgBouncer</h3>
-                        </div>
-                        <div class="component-tech">
-                            <span class="tech-badge">PostgreSQL 15</span>
-                            <span class="tech-badge">PgBouncer</span>
-                        </div>
-                        <ul class="component-features">
-                            <li><strong>PgBouncer:</strong> Connection pooling (port 6432)</li>
-                            <li><strong>Purpose:</strong> Multiplexes worker connections</li>
-                            <li><strong>Tables:</strong> Users, Tasks, TaskEvents, ApiKeys</li>
-                            <li><strong>Storage:</strong> 1Gi Persistent Volume</li>
-                        </ul>
-                        <div class="component-k8s">
-                            <code>k8s/infrastructure/postgres.yaml</code>
-                        </div>
-                    </div>
-
-                    <div class="component-card">
-                        <div class="component-header">
-                            <span class="component-icon">🔧</span>
-                            <h3>Worker Pool</h3>
-                        </div>
-                        <div class="component-tech">
-                            <span class="tech-badge">Python 3.11</span>
-                            <span class="tech-badge">AsyncIO</span>
-                        </div>
-                        <ul class="component-features">
-                            <li><strong>Scaling:</strong> 1-20 replicas via KEDA</li>
-                            <li><strong>Atomic Pop:</strong> BRPOPLPUSH to processing queue</li>
-                            <li><strong>Execution:</strong> CPU-intensive business logic</li>
-                            <li><strong>Heartbeat:</strong> Periodic health signals to Redis</li>
-                        </ul>
-                        <div class="component-k8s">
-                            <code>k8s/apps/worker.yaml</code>
-                        </div>
-                    </div>
-
-                    <div class="component-card">
-                        <div class="component-header">
-                            <img src="https://upload.wikimedia.org/wikipedia/commons/3/39/Kubernetes_logo_without_workmark.svg" class="component-logo-img" alt="Kubernetes Logo">
-                            <h3>KEDA Autoscaler</h3>
-                        </div>
-                        <div class="component-tech">
-                            <span class="tech-badge">KEDA 2.10+</span>
-                            <span class="tech-badge">Event-Driven</span>
-                        </div>
-                        <ul class="component-features">
-                            <li><strong>Trigger:</strong> Redis queue length (LLEN)</li>
-                            <li><strong>Formula:</strong> replicas = ceil(queue_length / 10)</li>
-                            <li><strong>Polling:</strong> Every 5 seconds</li>
-                            <li><strong>Cooldown:</strong> 30 seconds before scale-down</li>
-                        </ul>
-                        <div class="component-k8s">
-                            <code>k8s/autoscaling/worker-scaledobject.yaml</code>
-                        </div>
-                    </div>
-
-                    <div class="component-card">
-                        <div class="component-header">
-                            <span class="component-icon">🎯</span>
-                            <h3>Queue Manager</h3>
-                        </div>
-                        <div class="component-tech">
-                            <span class="tech-badge">Python</span>
-                            <span class="tech-badge">Multi-threaded</span>
-                        </div>
-                        <ul class="component-features">
-                            <li><strong>Leader Election:</strong> Redis-based distributed lock</li>
-                            <li><strong>Scheduler:</strong> scheduled_at → Redis (5s interval)</li>
-                            <li><strong>PEL Scanner:</strong> Dead worker recovery (10s)</li>
-                            <li><strong>Reconciliation:</strong> QUEUED tasks sync (30s)</li>
-                        </ul>
-                        <div class="component-k8s">
-                            <code>k8s/apps/queue-manager.yaml</code>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="fault-section">
-                <h2 class="section-title">Fault Tolerance</h2>
-                <div class="fault-grid">
-                    <div class="fault-card">
-                        <h3>Worker Crash</h3>
-                        <div class="fault-detection">
-                            <span class="label">Detection:</span> Missing heartbeat (10s)
-                        </div>
-                        <div class="fault-recovery">
-                            <span class="label">Recovery:</span> PEL Scanner re-queues task
-                        </div>
-                    </div>
-
-                    <div class="fault-card">
-                        <h3>Redis Crash</h3>
-                        <div class="fault-detection">
-                            <span class="label">Detection:</span> Connection error
-                        </div>
-                        <div class="fault-recovery">
-                            <span class="label">Recovery:</span> Queued Reconciliation re-pushes
-                        </div>
-                    </div>
-
-                    <div class="fault-card">
-                        <h3>Database Crash</h3>
-                        <div class="fault-detection">
-                            <span class="label">Detection:</span> Connection pool timeout
-                        </div>
-                        <div class="fault-recovery">
-                            <span class="label">Recovery:</span> Workers retry on next task
-                        </div>
-                    </div>
-
-                    <div class="fault-card">
-                        <h3>Queue Manager Crash</h3>
-                        <div class="fault-detection">
-                            <span class="label">Detection:</span> Lease expiry (10s)
-                        </div>
-                        <div class="fault-recovery">
-                            <span class="label">Recovery:</span> New leader elected via lock
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-        </div>
-    </section>
-
-    <footer class="footer">
-        <div class="container">
-            <p>&copy; 2026 TaskFlow. Built by <a href="https://github.com/dhruvkshah75" target="_blank">Dhruv Shah</a></p>
-            <div class="footer-links">
-                <a href="https://github.com/dhruvkshah75/TaskFlow" target="_blank">GitHub</a>
-                <a href="https://github.com/dhruvkshah75/TaskFlow/blob/main/README.md" target="_blank">Documentation</a>
-            </div>
-        </div>
-    </footer>
-
-    <script>
-        // Navbar scroll effect
-        window.addEventListener('scroll', function() {
-            const navbar = document.querySelector('.navbar');
-            if (window.scrollY > 50) {
-                navbar.classList.add('scrolled');
-            } else {
-                navbar.classList.remove('scrolled');
-            }
-        });
-    </script>
-    
-    <script type="module">
-        import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
-        mermaid.initialize({ 
-            startOnLoad: true,
-            securityLevel: 'loose', // Required for <img> tags
-            theme: 'default'
-        });
-    </script>
-</body>
+      </footer>
+    </div>
+    <script src="site.js" defer></script>
+    <script src="architecture.js" defer></script>
+  </body>
 </html>
