@@ -40,3 +40,5 @@ install-build-deps.sh
 clean-build.sh
 
 debian/
+
+.superdesign/tmp/

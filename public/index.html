@@ -1,235 +1,528 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TaskFlow - Distributed Task Queue System</title>
-    <link rel="stylesheet" href="style.css">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-</head>
-<body>
-    <!-- Navigation -->
-    <nav class="navbar">
-        <div class="container nav-container">
-            <div class="logo">
-                <img src="assets/logo1.png" alt="TaskFlow Logo" class="logo-img">
-                <span class="logo-text">TaskFlow</span>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>TaskFlow | Your Python. In motion.</title>
+    <meta
+      name="description"
+      content="Run distributed Python tasks with priority queues, dynamic code uploads, and Kubernetes autoscaling. Explore TaskFlow and run it locally."
+    />
+    <link rel="icon" href="assets/logo1.png" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&family=Geist+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+
+    <link rel="stylesheet" href="style.css" />
+    <meta property="og:title" content="TaskFlow | Your Python. In motion." />
+    <meta
+      property="og:description"
+      content="Distributed Python task execution with priority queues and Kubernetes autoscaling."
+    />
+    <meta
+      property="og:image"
+      content="https://taskflow-io.vercel.app/assets/logo1.png"
+    />
+    <meta name="twitter:card" content="summary" />
+  </head>
+  <body>
+    <div class="relative min-h-screen">
+      <a id="skip-content" class="skip" href="#main">Skip to content</a>
+      <header class="nav-shell">
+        <a id="brand-home" href="#main" class="brand" aria-label="TaskFlow home"
+          ><img
+            src="assets/logo1.png"
+            alt=""
+            width="32"
+            height="32"
+          />TaskFlow</a
+        >
+        <nav class="nav-links" aria-label="Main navigation">
+          <a id="nav-how" href="#how-it-works">How it works</a
+          ><a id="nav-demo" href="#demo">Demo</a
+          ><a id="nav-architecture" href="architecture.html">Architecture ↗</a
+          ><a
+            id="nav-github"
+            class="nav-git"
+            href="https://github.com/dhruvkshah75/TaskFlow"
+            >GitHub ↗</a
+          >
+        </nav>
+        <button
+          class="menu-toggle"
+          aria-expanded="false"
+          aria-controls="mobile-menu"
+          aria-label="Open navigation"
+        >
+          <span></span><span></span>
+        </button>
+      </header>
+      <nav
+        id="mobile-menu"
+        class="mobile-menu"
+        aria-label="Mobile navigation"
+        inert
+      >
+        <a id="mobile-how" href="#how-it-works">How it works</a
+        ><a id="mobile-demo" href="#demo">Demo</a
+        ><a id="mobile-architecture" href="architecture.html">Architecture ↗</a
+        ><a id="mobile-github" href="https://github.com/dhruvkshah75/TaskFlow"
+          >GitHub ↗</a
+        >
+      </nav>
+      <main id="main" tabindex="-1">
+        <section class="hero wrap" aria-labelledby="hero-title">
+          <div>
+            <div class="release eyebrow">
+              <span class="status-dot"></span> Open source task orchestration
             </div>
-            <div class="nav-links">
-                <a href="index.html" class="active">Home</a>
-                <a href="architecture.html">Architecture</a>
-                <a href="https://github.com/dhruvkshah75/TaskFlow" target="_blank" class="github-link">
-                    <svg class="github-icon" viewBox="0 0 16 16" fill="currentColor">
-                        <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/>
-                    </svg>
-                    GitHub
-                </a>
+            <h1 id="hero-title" class="heading-1">
+              <span>Your Python.</span
+              ><span class="motion-word">In motion.</span>
+            </h1>
+            <p class="hero-copy body-7 muted">
+              Upload a task. Give it a payload. TaskFlow queues the work, scales
+              the workers, and tracks task state.
+            </p>
+            <a id="hero-start" class="primary button-md" href="#quickstart"
+              >Run TaskFlow locally
+              <span class="arrow" aria-hidden="true">↗</span></a
+            >
+            <p class="under-cta caption-4 muted">
+              <span aria-hidden="true">↳</span> Your infrastructure. Your code.
+              MIT licensed.
+            </p>
+          </div>
+          <div class="hero-visual">
+            <div class="console" id="execution-console">
+              <div class="console-top">
+                <div class="console-name">
+                  <span class="console-lights" aria-hidden="true"
+                    ><i></i><i></i><i></i></span
+                  ><span class="mono caption-4">process_data.py</span>
+                </div>
+                <button
+                  id="pause-motion"
+                  class="pause caption-4"
+                  aria-pressed="false"
+                >
+                  Pause
+                </button>
+              </div>
+              <div class="console-code mono" aria-label="Python task example">
+                <span class="code-line code-muted"># You write the work.</span
+                ><span class="code-line"
+                  ><span class="code-orange">async def</span>
+                  <span class="code-green">handler</span>(payload):</span
+                ><span class="code-line">
+                  result =
+                  <span class="code-orange">await</span> process(payload)</span
+                ><span class="code-line">
+                  <span class="code-orange">return</span> {<span
+                    class="code-green"
+                    >"result"</span
+                  >: result}</span
+                >
+              </div>
+              <div class="execution">
+                <div class="execution-head caption-4 mono">
+                  <span>TaskFlow handles the rest.</span
+                  ><span class="live"><i></i> Simulation</span>
+                </div>
+                <div
+                  class="pipeline"
+                  role="img"
+                  aria-label="Task flows from API to Redis queue, Python worker, and persisted task status"
+                >
+                  <div class="stage">
+                    <div class="stage-symbol mono">&gt;_</div>
+                    <span class="stage-label">Submit</span>
+                  </div>
+                  <div class="wire"><i class="packet"></i></div>
+                  <div class="stage">
+                    <div class="stage-symbol mono">≡</div>
+                    <span class="stage-label">Queue</span>
+                  </div>
+                  <div class="wire"><i class="packet"></i></div>
+                  <div class="stage">
+                    <div class="stage-symbol mono">{ }</div>
+                    <span class="stage-label">Execute</span>
+                  </div>
+                  <div class="wire"><i class="packet"></i></div>
+                  <div class="stage">
+                    <div class="stage-symbol">✓</div>
+                    <span class="stage-label">Persist</span>
+                  </div>
+                </div>
+              </div>
+              <div class="console-result mono caption-4">
+                <span>✓ status stored in PostgreSQL</span
+                ><span class="result-timing">task.complete</span>
+              </div>
             </div>
+            <p class="demo-note caption-4">
+              An execution model, not a live cluster.
+            </p>
+          </div>
+        </section>
+        <div class="wrap facts">
+          <div class="fact">
+            <strong class="mono">2 → 20</strong
+            ><span class="caption-4 muted"
+              >Workers that scale<br />with queue depth</span
+            >
+          </div>
+          <div class="fact">
+            <strong class="mono">02</strong
+            ><span class="caption-4 muted"
+              >Priority queues.<br />Urgent work goes first.</span
+            >
+          </div>
+          <div class="fact">
+            <strong class="mono">def / async</strong
+            ><span class="caption-4 muted"
+              >Your existing Python.<br />Both supported.</span
+            >
+          </div>
         </div>
-    </nav>
-
-    <!-- Hero Section -->
-    <section class="hero">
-        <div class="container">
-            <div class="hero-content">
-                <h1 class="hero-title">Distributed Task Queue System</h1>
-                <p class="hero-subtitle">Fault-tolerant distributed system for scalable, asynchronous background processing</p>
-                <div class="hero-badges">
-                    <span class="badge">FastAPI</span>
-                    <span class="badge">Redis</span>
-                    <span class="badge">PostgreSQL</span>
-                    <span class="badge">Docker</span>
-                    <span class="badge">Kubernetes</span>
-                </div>
-                <div class="hero-buttons">
-                    <a href="https://github.com/dhruvkshah75/TaskFlow" target="_blank" class="btn btn-primary">Get Started</a>
-                    <a href="architecture.html" class="btn btn-secondary">System Architecture</a>
-                    <a href="#demo" class="btn btn-secondary">View Demo</a>
-                </div>
+        <section
+          class="section wrap statement"
+          aria-labelledby="statement-title"
+        >
+          <div class="section-label eyebrow orange">
+            Less orchestration.<br />More building.
+          </div>
+          <div>
+            <h2 id="statement-title" class="heading-2 word-reveal">
+              Write the function.<br />Let the system<br />carry the workload.
+            </h2>
+            <p class="statement-note body-7 muted reveal">
+              The path from Python code to distributed execution shouldn’t
+              require a new container image every time you change a function.
+            </p>
+          </div>
+        </section>
+        <section
+          id="how-it-works"
+          class="section feature-section"
+          aria-labelledby="scaling-title"
+        >
+          <div class="wrap">
+            <div class="section-label eyebrow orange">
+              01 / A system that responds
             </div>
-        </div>
-    </section>
-
-    <!-- Demo Section -->
-    <section id="demo" class="demo-section">
-        <div class="container">
-            <h2 class="section-title">See TaskFlow in Action</h2>
-            <p class="section-subtitle">Watch how TaskFlow handles distributed task processing at scale</p>
-            
-            <!-- Live Demo GIF -->
-            <h3 class="demo-heading">Live Demo</h3>
-            <div class="demo-logos">
-                <img src="https://www.docker.com/wp-content/uploads/2022/03/Moby-logo.png" alt="Docker" class="demo-logo">
-                <img src="https://raw.githubusercontent.com/kubernetes/kubernetes/master/logo/logo.svg" alt="Kubernetes" class="demo-logo demo-logo-k8s">
-                <img src="https://www.postgresql.org/media/img/about/press/elephant.png" alt="PostgreSQL" class="demo-logo">
-                <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/redis/redis-original.svg" alt="Redis" class="demo-logo demo-logo-redis">
+            <div class="feature-heading reveal">
+              <h2 id="scaling-title" class="heading-2">
+                More work arrives.<br />More workers show up.
+              </h2>
+              <p class="body-3 muted">
+                KEDA watches the Redis queue and adjusts your worker fleet.
+                Explore the idea below.
+              </p>
             </div>
-            <div class="demo-container">
-                <img src="assets/output_high_res.gif" alt="TaskFlow Demo" class="demo-gif">
+            <div class="scaling-grid">
+              <div class="reveal">
+                <div
+                  class="scale-controls"
+                  role="group"
+                  aria-label="Simulated workload"
+                >
+                  <button
+                    class="scale-button button-sm"
+                    data-workers="2"
+                    aria-pressed="true"
+                  >
+                    Quiet queue</button
+                  ><button
+                    class="scale-button button-sm"
+                    data-workers="10"
+                    aria-pressed="false"
+                  >
+                    Work picks up</button
+                  ><button
+                    class="scale-button button-sm"
+                    data-workers="20"
+                    aria-pressed="false"
+                  >
+                    Peak demand
+                  </button>
+                </div>
+                <div class="scale-surface">
+                  <div class="scale-header">
+                    <span class="eyebrow muted">Worker fleet</span
+                    ><span class="scale-count mono"
+                      ><span id="worker-count">02</span
+                      ><span class="muted"> / 20</span></span
+                    >
+                  </div>
+                  <div class="pods" id="pods" aria-hidden="true"></div>
+                  <div class="scale-caption caption-4 muted">
+                    <span id="scale-message" role="status"
+                      >Baseline capacity. Ready for work.</span
+                    ><span class="mono">KEDA + Redis</span>
+                  </div>
+                </div>
+                <p class="caption-4 muted" style="margin-top: 12px">
+                  Illustrative scaling states. Actual scaling follows queue
+                  depth.
+                </p>
+              </div>
+              <div class="benefits reveal">
+                <article class="benefit">
+                  <span class="benefit-num mono caption-4">01</span>
+                  <div>
+                    <h3 class="title-1">Change code. Keep running.</h3>
+                    <p class="body-3 muted">
+                      Upload custom Python tasks at runtime. Workers load your
+                      handler without a container rebuild.
+                    </p>
+                  </div>
+                </article>
+                <article class="benefit">
+                  <span class="benefit-num mono caption-4">02</span>
+                  <div>
+                    <h3 class="title-1">Give urgent work its own lane.</h3>
+                    <p class="body-3 muted">
+                      Separate high and low priority queues keep critical tasks
+                      from waiting behind routine work.
+                    </p>
+                  </div>
+                </article>
+                <article class="benefit">
+                  <span class="benefit-num mono caption-4">03</span>
+                  <div>
+                    <h3 class="title-1">Keep task state in sight.</h3>
+                    <p class="body-3 muted">
+                      Task history and status persist in PostgreSQL. Follow task
+                      states through the REST API.
+                    </p>
+                  </div>
+                </article>
+              </div>
             </div>
-            
-        </div>
-    </section>
-
-    <!-- Features Section -->
-    <section class="features-section">
-        <div class="container">
-            <h2 class="section-title">Key Features</h2>
-            <div class="features-grid">
-                <div class="feature-card">
-                    <div class="feature-icon">🚀</div>
-                    <h3>Distributed Processing</h3>
-                    <p>Horizontally scalable worker nodes process tasks in parallel across multiple instances</p>
-                </div>
-                <div class="feature-card">
-                    <div class="feature-icon">⚡</div>
-                    <h3>High Performance</h3>
-                    <p>Built on FastAPI for lightning-fast task submission and monitoring with async capabilities</p>
-                </div>
-                <div class="feature-card">
-                    <div class="feature-icon-logo">
-                        <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/redis/redis-original.svg" alt="Redis" class="feature-logo-redis">
-                    </div>
-                    <h3>Reliable Scheduling</h3>
-                    <p>Redis-based locking prevents race conditions and ensures reliable task distribution</p>
-                </div>
-                <div class="feature-card">
-                    <div class="feature-icon">📊</div>
-                    <h3>Observable</h3>
-                    <p>Complete audit trail of task states via REST endpoints for full visibility</p>
-                </div>
-                <div class="feature-card">
-                    <div class="feature-icon-logo">
-                        <img src="https://www.docker.com/wp-content/uploads/2022/03/Moby-logo.png" alt="Docker" class="feature-logo">
-                        <img src="https://raw.githubusercontent.com/kubernetes/kubernetes/master/logo/logo.svg" alt="Kubernetes" class="feature-logo-k8s">
-                    </div>
-                    <h3>Production Ready</h3>
-                    <p>Docker Compose and Kubernetes deployment configurations included</p>
-                </div>
-                <div class="feature-card">
-                    <div class="feature-icon-logo">
-                        <img src="https://www.postgresql.org/media/img/about/press/elephant.png" alt="PostgreSQL" class="feature-logo">
-                    </div>
-                    <h3>Persistent Storage</h3>
-                    <p>PostgreSQL ensures durable persistence of task history and results</p>
-                </div>
+          </div>
+        </section>
+        <section
+          id="quickstart"
+          class="section wrap setup-grid"
+          aria-labelledby="setup-title"
+        >
+          <div class="setup-intro reveal">
+            <div class="section-label eyebrow orange">
+              02 / From repo to running
             </div>
-        </div>
-    </section>
-
-    <!-- Quick Start Section -->
-    <section class="quickstart-section">
-        <div class="container">
-            <h2 class="section-title">Quick Start</h2>
-            <div class="quickstart-grid">
-                <div class="quickstart-card">
-                    <h3 class="quickstart-title">
-                        <img src="https://www.docker.com/wp-content/uploads/2022/03/Moby-logo.png" alt="Docker" class="quickstart-logo">
-                        Docker Deployment
-                    </h3>
-                    <div class="code-block">
-                        <code>curl -sSL https://raw.githubusercontent.com/dhruvkshah75/TaskFlow/main/install.sh | bash</code>
-                    </div>
-                    <p>One-line installation with Docker Compose</p>
+            <h2 id="setup-title" class="heading-2">
+              A small start.<br />A distributed system.
+            </h2>
+            <p class="body-3 muted">
+              Bring Docker, Minikube, and kubectl. The repository’s Makefile
+              handles the local deployment.
+            </p>
+            <a
+              id="setup-docs"
+              class="text-link"
+              href="https://github.com/dhruvkshah75/TaskFlow#kubernetes-local-deployment-minikube"
+              >Read the setup guide <span aria-hidden="true">↗</span></a
+            >
+          </div>
+          <ol class="steps reveal">
+            <li>
+              <div>
+                <h3 class="title-3">Get the source</h3>
+                <div class="command">
+                  <code class="mono"
+                    >git clone
+                    https://github.com/dhruvkshah75/TaskFlow.git</code
+                  ><button class="copy" aria-label="Copy clone command">
+                    Copy
+                  </button>
                 </div>
-                <div class="quickstart-card">
-                    <h3 class="quickstart-title">
-                        <img src="https://raw.githubusercontent.com/kubernetes/kubernetes/master/logo/logo.svg" alt="Kubernetes" class="quickstart-logo">
-                        Kubernetes Deployment
-                    </h3>
-                    <div class="code-block">
-                        <code>kubectl create namespace taskflow<br>kubectl apply -f k8s/</code>
-                    </div>
-                    <p>Deploy to production Kubernetes cluster</p>
+              </div>
+            </li>
+            <li>
+              <div>
+                <h3 class="title-3">Enter the project</h3>
+                <div class="command">
+                  <code class="mono">cd TaskFlow</code
+                  ><button class="copy" aria-label="Copy directory command">
+                    Copy
+                  </button>
                 </div>
+              </div>
+            </li>
+            <li>
+              <div>
+                <h3 class="title-3">Start the local stack</h3>
+                <div class="command">
+                  <code class="mono">make run-local</code
+                  ><button class="copy" aria-label="Copy deployment command">
+                    Copy
+                  </button>
+                </div>
+                <p class="step-note caption-4 muted">
+                  Builds images and deploys services with autoscaling.
+                </p>
+              </div>
+            </li>
+          </ol>
+        </section>
+        <section
+          id="demo"
+          class="section demo-section"
+          aria-labelledby="demo-title"
+        >
+          <div class="wrap">
+            <div class="section-label eyebrow" style="color: #ef9a72">
+              03 / See the actual system
             </div>
-        </div>
-    </section>
-
-    <!-- Tech Stack Section -->
-    <section class="tech-stack-section">
-        <div class="container">
-            <h2 class="section-title">Built With</h2>
-            <div class="tech-stack-grid">
-                <div class="tech-item">
-                    <img src="https://fastapi.tiangolo.com/img/logo-margin/logo-teal.png" alt="FastAPI" class="tech-logo">
-                    <span>FastAPI</span>
-                </div>
-                <div class="tech-item">
-                    <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/python/python-original.svg" alt="Python" class="tech-logo">
-                    <span>Python 3.11+</span>
-                </div>
-                <div class="tech-item">
-                    <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/redis/redis-original.svg" alt="Redis" class="tech-logo redis-logo">
-                    <span>Redis</span>
-                </div>
-                <div class="tech-item">
-                    <img src="https://www.postgresql.org/media/img/about/press/elephant.png" alt="PostgreSQL" class="tech-logo">
-                    <span>PostgreSQL</span>
-                </div>
-                <div class="tech-item">
-                    <img src="https://www.docker.com/wp-content/uploads/2022/03/Moby-logo.png" alt="Docker" class="tech-logo">
-                    <span>Docker</span>
-                </div>
-                <div class="tech-item">
-                    <img src="https://raw.githubusercontent.com/kubernetes/kubernetes/master/logo/logo.svg" alt="Kubernetes" class="tech-logo k8s-logo">
-                    <span>Kubernetes</span>
-                </div>
+            <div class="demo-heading reveal">
+              <h2 id="demo-title" class="heading-2">
+                Less pitch.<br />More proof.
+              </h2>
+              <p class="body-3">
+                Watch the project demonstration, from the terminal to the
+                running system.
+              </p>
             </div>
-        </div>
-    </section>
-
-    <!-- CTA Section -->
-    <section class="cta-section">
-        <div class="container">
-            <h2>Ready to Scale Your Task Processing?</h2>
-            <p>Get started with TaskFlow today and handle millions of background jobs with ease</p>
-            <a href="https://github.com/dhruvkshah75/TaskFlow" target="_blank" class="btn btn-primary btn-large">
-                <svg class="github-icon" viewBox="0 0 16 16" fill="currentColor">
-                    <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/>
-                </svg>
-                View on GitHub
-            </a>
-        </div>
-    </section>
-
-    <!-- Footer -->
-    <footer class="footer">
-        <div class="container">
-            <div class="footer-links">
-                <a href="https://github.com/dhruvkshah75/TaskFlow" target="_blank">GitHub</a>
-                <a href="https://github.com/dhruvkshah75/TaskFlow/blob/main/README.md" target="_blank">Documentation</a>
-                <a href="https://github.com/dhruvkshah75/TaskFlow/issues" target="_blank">Issues</a>
+            <div class="demo-player reveal">
+              <video
+                controls
+                preload="none"
+                playsinline
+                aria-label="TaskFlow project demonstration"
+                poster="assets1/illustration.png"
+              >
+                <source src="assets1/demonstration.mp4" type="video/mp4" />
+                Your browser cannot play this video. Visit the project
+                repository for the demonstration.
+              </video>
             </div>
+            <div class="demo-foot caption-4">
+              <span>TaskFlow / Project demonstration</span
+              ><span class="mono"
+                >FastAPI · Redis · PostgreSQL · Kubernetes</span
+              >
+            </div>
+          </div>
+        </section>
+        <section class="section wrap faq-grid" aria-labelledby="faq-title">
+          <div class="reveal">
+            <div class="section-label eyebrow orange">Before you run it</div>
+            <h2 id="faq-title" class="heading-2">A few useful details.</h2>
+            <p class="body-3 muted">
+              A little context before you put your first task in motion.
+            </p>
+          </div>
+          <div class="reveal">
+            <details>
+              <summary>What kind of tasks can I run?</summary>
+              <p>
+                Python files with a handler(payload) function. Synchronous and
+                asynchronous handlers are supported. Match the task title to the
+                Python filename without its extension.
+              </p>
+            </details>
+            <details>
+              <summary>How does worker scaling work?</summary>
+              <p>
+                KEDA monitors Redis queue depth and adjusts the Kubernetes
+                worker deployment from 2 to 20 pods. The scaling controls above
+                illustrate the concept; they do not control a real cluster.
+              </p>
+            </details>
+            <details>
+              <summary>Do code changes require rebuilding workers?</summary>
+              <p>
+                No. TaskFlow supports dynamic Python uploads. Workers load the
+                uploaded task code through shared storage without rebuilding the
+                worker image.
+              </p>
+            </details>
+            <details>
+              <summary>What do I need to run it locally?</summary>
+              <p>
+                Docker with its daemon running, Minikube, and kubectl. Follow
+                the repository README for prerequisites and local deployment
+                instructions.
+              </p>
+            </details>
+            <details>
+              <summary>Where does task status live?</summary>
+              <p>
+                PostgreSQL stores task history and status. Redis handles the
+                message queues, while workers execute the Python handlers.
+              </p>
+            </details>
+            <details>
+              <summary>Can I inspect and change the source?</summary>
+              <p>
+                Yes. TaskFlow is open source under the MIT license. Explore the
+                repository, run it on your own infrastructure, and adapt the
+                code to your needs.
+              </p>
+            </details>
+          </div>
+        </section>
+        <section class="wrap" aria-labelledby="closing-title">
+          <div class="closing reveal">
+            <div>
+              <h2 id="closing-title" class="heading-2">
+                Your next task<br />has somewhere to go.
+              </h2>
+              <p class="body-3 muted">
+                Start with a function. See where it takes you.
+              </p>
+            </div>
+            <a id="closing-start" class="primary button-md" href="#quickstart"
+              >Run TaskFlow locally
+              <span class="arrow" aria-hidden="true">↗</span></a
+            >
+          </div>
+        </section>
+      </main>
+      <footer class="footer wrap">
+        <div class="footer-main">
+          <a id="footer-brand" href="#main" class="brand"
+            ><img
+              src="assets/logo1.png"
+              alt=""
+              width="32"
+              height="32"
+            />TaskFlow</a
+          >
+          <nav class="footer-links" aria-label="Footer">
+            <a id="footer-code" href="https://github.com/dhruvkshah75/TaskFlow"
+              >Source ↗</a
+            ><a
+              id="footer-docs"
+              href="https://github.com/dhruvkshah75/TaskFlow/blob/main/README.md"
+              >Documentation ↗</a
+            ><a
+              id="footer-issues"
+              href="https://github.com/dhruvkshah75/TaskFlow/issues"
+              >Issues ↗</a
+            >
+          </nav>
         </div>
-    </footer>
-
-    <script>
-        // Smooth scrolling for anchor links
-        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
-            anchor.addEventListener('click', function (e) {
-                e.preventDefault();
-                const target = document.querySelector(this.getAttribute('href'));
-                if (target) {
-                    target.scrollIntoView({
-                        behavior: 'smooth',
-                        block: 'start'
-                    });
-                }
-            });
-        });
-
-        // Navbar scroll effect
-        window.addEventListener('scroll', () => {
-            const navbar = document.querySelector('.navbar');
-            if (window.scrollY > 50) {
-                navbar.classList.add('scrolled');
-            } else {
-                navbar.classList.remove('scrolled');
-            }
-        });
-    </script>
-</body>
+        <div class="footer-bottom caption-4">
+          <span>Built for the work behind the scenes.</span
+          ><a
+            id="footer-license"
+            href="https://github.com/dhruvkshah75/TaskFlow/blob/main/LICENSE"
+            >Open source · MIT license</a
+          >
+        </div>
+      </footer>
+      <div
+        id="copy-status"
+        class="sr-only"
+        role="status"
+        aria-live="polite"
+      ></div>
+    </div>
+    <script src="site.js" defer></script>
+  </body>
 </html>
