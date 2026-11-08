@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-type="software" data-radius="soft" data-buttons="solid" data-motion>
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -9,13 +9,9 @@
       content="Follow a Python task through TaskFlow: FastAPI, PostgreSQL, priority Redis queues, Python workers, and KEDA autoscaling."
     />
     <link rel="icon" href="assets/logo1.png" />
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&family=Geist+Mono:wght@400;500&display=swap"
-      rel="stylesheet"
-    />
-    <link rel="stylesheet" href="style.css" />
+    <meta name="page-type" content="software" />
+    <meta name="site-kind" content="software" />
+    <link rel="stylesheet" href="landing.css" />
     <link rel="stylesheet" href="architecture.css" />
     <meta property="og:title" content="Architecture | Inside TaskFlow" />
     <meta
@@ -29,41 +25,43 @@
     <meta name="twitter:card" content="summary" />
   </head>
   <body>
-    <div class="relative min-h-screen">
+    <div class="site">
       <a id="skip-content" class="skip" href="#main">Skip to content</a>
-      <header class="nav-shell">
-        <a
-          id="brand-home"
-          href="index.html"
-          class="brand"
-          aria-label="TaskFlow home"
-          ><img
-            src="assets/logo1.png"
-            alt=""
-            width="32"
-            height="32"
-          />TaskFlow</a
-        >
-        <nav class="nav-links" aria-label="Main navigation">
-          <a id="nav-how" href="index.html#how-it-works">How it works</a
-          ><a id="nav-demo" href="index.html#demo">Demo</a
-          ><a aria-current="page" id="nav-architecture" href="architecture.html"
-            >Architecture ↗</a
-          ><a
-            id="nav-github"
-            class="nav-git"
-            href="https://github.com/dhruvkshah75/TaskFlow"
-            >GitHub ↗</a
+      <header class="nav nav-shell">
+        <div class="wrap nav-inner">
+          <a
+            id="brand-home"
+            href="index.html"
+            class="brand nav__logo"
+            aria-label="TaskFlow home"
+            ><img
+              src="assets/logo1.png"
+              alt=""
+              width="32"
+              height="32"
+            />TaskFlow</a
           >
-        </nav>
-        <button
-          class="menu-toggle"
-          aria-expanded="false"
-          aria-controls="mobile-menu"
-          aria-label="Open navigation"
-        >
-          <span></span><span></span>
-        </button>
+          <nav class="nav-links" aria-label="Main navigation">
+            <a id="nav-how" href="index.html#how-it-works">How it works</a
+            ><a id="nav-demo" href="index.html#demo">Demo</a
+            ><a aria-current="page" id="nav-architecture" href="architecture.html"
+              >Architecture ↗</a
+            ><a
+              id="nav-github"
+              class="nav-git"
+              href="https://github.com/dhruvkshah75/TaskFlow"
+              >GitHub ↗</a
+            >
+          </nav>
+          <button
+            class="menu-toggle"
+            aria-expanded="false"
+            aria-controls="mobile-menu"
+            aria-label="Open navigation"
+          >
+            <span></span><span></span>
+          </button>
+        </div>
       </header>
       <nav
         id="mobile-menu"
@@ -83,31 +81,33 @@
         >
       </nav>
       <main id="main" tabindex="-1">
-        <section class="arch-hero wrap" aria-labelledby="arch-title">
-          <div class="breadcrumbs caption-4 muted">
-            <a id="breadcrumb-home" href="index.html">TaskFlow</a
-            ><span aria-hidden="true">/</span><span>Architecture</span>
-          </div>
-          <div class="arch-hero-grid">
-            <h1 id="arch-title" class="heading-1">
-              A task’s journey.<br />Every moving part.
-            </h1>
-            <div class="arch-intro">
-              <p class="body-7 muted">
-                From a Python function to a fleet of workers. Here’s how
-                TaskFlow moves the work, tracks its state, and responds when
-                things change.
-              </p>
-              <span class="eyebrow orange">A look inside the system</span>
+        <section class="arch-hero route-ground" aria-labelledby="arch-title">
+          <div class="wrap">
+            <div class="breadcrumbs caption-4 muted">
+              <a id="breadcrumb-home" href="index.html">TaskFlow</a
+              ><span aria-hidden="true">/</span><span>Architecture</span>
             </div>
+            <div class="hero-panel arch-hero-grid">
+              <h1 id="arch-title" class="heading-1">
+                A task’s journey.<br /><span class="motion-word">Every moving part.</span>
+              </h1>
+              <div class="arch-intro">
+                <p class="body-7 muted">
+                  From a Python function to a fleet of workers. Here’s how
+                  TaskFlow moves the work, tracks its state, and responds when
+                  things change.
+                </p>
+                <span class="eyebrow release">A look inside the system</span>
+              </div>
+            </div>
+            <nav class="arch-jumps" aria-label="On this page">
+              <a id="jump-map" href="#system">01 / System map</a
+              ><a id="jump-lifecycle" href="#lifecycle">02 / Task lifecycle</a
+              ><a id="jump-components" href="#components">03 / Components</a
+              ><a id="jump-scaling" href="#scaling">04 / Scaling</a
+              ><a id="jump-recovery" href="#recovery">05 / Recovery</a>
+            </nav>
           </div>
-          <nav class="arch-jumps" aria-label="On this page">
-            <a id="jump-map" href="#system">01 / System map</a
-            ><a id="jump-lifecycle" href="#lifecycle">02 / Task lifecycle</a
-            ><a id="jump-components" href="#components">03 / Components</a
-            ><a id="jump-scaling" href="#scaling">04 / Scaling</a
-            ><a id="jump-recovery" href="#recovery">05 / Recovery</a>
-          </nav>
         </section>
         <section
           id="system"
@@ -126,7 +126,7 @@
               </div>
               <button
                 id="map-pause"
-                class="pause caption-4"
+                class="pause btn caption-4"
                 aria-pressed="false"
               >
                 Pause
@@ -153,7 +153,7 @@
                       markerHeight="5"
                       orient="auto-start-reverse"
                     >
-                      <path d="M 0 0 L 10 5 L 0 10 z" fill="#898c78" />
+                      <path class="map-arrow" d="M 0 0 L 10 5 L 0 10 z" />
                     </marker>
                   </defs>
                   <path
@@ -354,8 +354,8 @@
           class="section wrap"
           aria-labelledby="lifecycle-title"
         >
-          <div class="section-label eyebrow orange">02 / Follow one task</div>
-          <div class="journey-header reveal">
+          <div class="section-label eyebrow accent">02 / Follow one task</div>
+          <div class="journey-header">
             <h2 id="lifecycle-title" class="heading-2">
               A function goes in.<br />The system takes it from there.
             </h2>
@@ -412,7 +412,7 @@
               aria-atomic="true"
             >
               <div>
-                <span id="journey-kicker" class="eyebrow orange"
+                <span id="journey-kicker" class="eyebrow accent"
                   >01 / Shared code, ready to run</span
                 >
                 <h3 id="journey-title" class="heading-3">
@@ -442,10 +442,10 @@ async def handler(payload):
           aria-labelledby="components-title"
         >
           <div class="wrap">
-            <div class="section-label eyebrow orange">
+            <div class="section-label eyebrow accent">
               03 / Small parts, clear responsibilities
             </div>
-            <div class="layers-intro reveal">
+            <div class="layers-intro">
               <h2 id="components-title" class="heading-2">
                 Each part earns<br />its place.
               </h2>
@@ -455,7 +455,7 @@ async def handler(payload):
               </p>
             </div>
             <div class="layer-row">
-              <span class="mono caption-4 orange">01</span>
+              <span class="mono caption-4 accent">01</span>
               <div class="layer-title">
                 <h3 class="title-1">Request layer</h3>
                 <span class="caption-4 muted">FastAPI · CLI</span>
@@ -472,7 +472,7 @@ async def handler(payload):
               >
             </div>
             <div class="layer-row">
-              <span class="mono caption-4 orange">02</span>
+              <span class="mono caption-4 accent">02</span>
               <div class="layer-title">
                 <h3 class="title-1">Coordination layer</h3>
                 <span class="caption-4 muted">Queue manager · Redis</span>
@@ -489,7 +489,7 @@ async def handler(payload):
               >
             </div>
             <div class="layer-row">
-              <span class="mono caption-4 orange">03</span>
+              <span class="mono caption-4 accent">03</span>
               <div class="layer-title">
                 <h3 class="title-1">Execution layer</h3>
                 <span class="caption-4 muted">Python · AsyncIO</span>
@@ -506,7 +506,7 @@ async def handler(payload):
               >
             </div>
             <div class="layer-row">
-              <span class="mono caption-4 orange">04</span>
+              <span class="mono caption-4 accent">04</span>
               <div class="layer-title">
                 <h3 class="title-1">Persistence layer</h3>
                 <span class="caption-4 muted"
@@ -531,8 +531,8 @@ async def handler(payload):
           class="section wrap scaler-block"
           aria-labelledby="scaling-title"
         >
-          <div class="scaler-copy reveal">
-            <div class="section-label eyebrow orange">
+          <div class="scaler-copy">
+            <div class="section-label eyebrow accent">
               04 / Capacity follows the queue
             </div>
             <h2 id="scaling-title" class="heading-2">
@@ -554,7 +554,7 @@ async def handler(payload):
               >Explore the scaling manifest ↗</a
             >
           </div>
-          <div class="config-panel reveal">
+          <div class="config-panel">
             <header class="mono caption-4">
               <span>worker-scaledobject.yaml</span><span>KEDA</span>
             </header>
@@ -579,8 +579,8 @@ async def handler(payload):
           aria-labelledby="recovery-title"
         >
           <div class="wrap failure-layout">
-            <div class="reveal">
-              <div class="section-label eyebrow orange">
+            <div>
+              <div class="section-label eyebrow accent">
                 05 / When a part stops
               </div>
               <h2 id="recovery-title" class="heading-2">
@@ -645,18 +645,18 @@ async def handler(payload):
           </div>
         </section>
         <section class="wrap arch-closing" aria-labelledby="arch-closing-title">
-          <div class="closing reveal">
+          <div class="closing">
             <div>
               <h2 id="arch-closing-title" class="heading-2">
                 Trace the path.<br />Then run it yourself.
               </h2>
-              <p class="body-3 muted">
+              <p class="body-3">
                 The source is open. The next task is yours.
               </p>
             </div>
             <a
               id="arch-start"
-              class="primary button-md"
+              class="primary btn button-md"
               href="index.html#quickstart"
               >Run TaskFlow locally
               <span class="arrow" aria-hidden="true">↗</span></a

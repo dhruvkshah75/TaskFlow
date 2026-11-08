@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-type="software" data-radius="soft" data-buttons="solid" data-motion>
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -9,14 +9,9 @@
       content="Run distributed Python tasks with priority queues, dynamic code uploads, and Kubernetes autoscaling. Explore TaskFlow and run it locally."
     />
     <link rel="icon" href="assets/logo1.png" />
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&family=Geist+Mono:wght@400;500&display=swap"
-      rel="stylesheet"
-    />
-
-    <link rel="stylesheet" href="style.css" />
+    <meta name="page-type" content="software" />
+    <meta name="site-kind" content="software" />
+    <link rel="stylesheet" href="landing.css" />
     <meta property="og:title" content="TaskFlow | Your Python. In motion." />
     <meta
       property="og:description"
@@ -29,36 +24,38 @@
     <meta name="twitter:card" content="summary" />
   </head>
   <body>
-    <div class="relative min-h-screen">
+    <div class="site">
       <a id="skip-content" class="skip" href="#main">Skip to content</a>
-      <header class="nav-shell">
-        <a id="brand-home" href="#main" class="brand" aria-label="TaskFlow home"
-          ><img
-            src="assets/logo1.png"
-            alt=""
-            width="32"
-            height="32"
-          />TaskFlow</a
-        >
-        <nav class="nav-links" aria-label="Main navigation">
-          <a id="nav-how" href="#how-it-works">How it works</a
-          ><a id="nav-demo" href="#demo">Demo</a
-          ><a id="nav-architecture" href="architecture.html">Architecture ↗</a
-          ><a
-            id="nav-github"
-            class="nav-git"
-            href="https://github.com/dhruvkshah75/TaskFlow"
-            >GitHub ↗</a
+      <header class="nav nav-shell">
+        <div class="wrap nav-inner">
+          <a id="brand-home" href="#main" class="brand nav__logo" aria-label="TaskFlow home"
+            ><img
+              src="assets/logo1.png"
+              alt=""
+              width="32"
+              height="32"
+            />TaskFlow</a
           >
-        </nav>
-        <button
-          class="menu-toggle"
-          aria-expanded="false"
-          aria-controls="mobile-menu"
-          aria-label="Open navigation"
-        >
-          <span></span><span></span>
-        </button>
+          <nav class="nav-links" aria-label="Main navigation">
+            <a id="nav-how" href="#how-it-works">How it works</a
+            ><a id="nav-demo" href="#demo">Demo</a
+            ><a id="nav-architecture" href="architecture.html">Architecture ↗</a
+            ><a
+              id="nav-github"
+              class="nav-git"
+              href="https://github.com/dhruvkshah75/TaskFlow"
+              >GitHub ↗</a
+            >
+          </nav>
+          <button
+            class="menu-toggle"
+            aria-expanded="false"
+            aria-controls="mobile-menu"
+            aria-label="Open navigation"
+          >
+            <span></span><span></span>
+          </button>
+        </div>
       </header>
       <nav
         id="mobile-menu"
@@ -74,124 +71,128 @@
         >
       </nav>
       <main id="main" tabindex="-1">
-        <section class="hero wrap" aria-labelledby="hero-title">
-          <div>
-            <div class="release eyebrow">
-              <span class="status-dot"></span> Open source task orchestration
-            </div>
-            <h1 id="hero-title" class="heading-1">
-              <span>Your Python.</span
-              ><span class="motion-word">In motion.</span>
-            </h1>
-            <p class="hero-copy body-7 muted">
-              Upload a task. Give it a payload. TaskFlow queues the work, scales
-              the workers, and tracks task state.
-            </p>
-            <a id="hero-start" class="primary button-md" href="#quickstart"
-              >Run TaskFlow locally
-              <span class="arrow" aria-hidden="true">↗</span></a
-            >
-            <p class="under-cta caption-4 muted">
-              <span aria-hidden="true">↳</span> Your infrastructure. Your code.
-              MIT licensed.
-            </p>
-          </div>
-          <div class="hero-visual">
-            <div class="console" id="execution-console">
-              <div class="console-top">
-                <div class="console-name">
-                  <span class="console-lights" aria-hidden="true"
-                    ><i></i><i></i><i></i></span
-                  ><span class="mono caption-4">process_data.py</span>
+        <section class="hero route-ground" aria-labelledby="hero-title">
+          <div class="wrap">
+            <div class="hero-panel">
+              <div class="hero-intro">
+                <div class="release eyebrow">
+                  <span class="status-dot"></span> Open source task orchestration
                 </div>
-                <button
-                  id="pause-motion"
-                  class="pause caption-4"
-                  aria-pressed="false"
+                <h1 id="hero-title" class="heading-1">
+                  <span>Your Python.</span
+                  ><span class="motion-word">In motion.</span>
+                </h1>
+                <p class="hero__lead hero-copy body-7 muted">
+                  Upload a task. Give it a payload. TaskFlow queues the work, scales
+                  the workers, and tracks task state.
+                </p>
+                <a id="hero-start" class="primary btn button-md" href="#quickstart"
+                  >Run TaskFlow locally
+                  <span class="arrow" aria-hidden="true">↗</span></a
                 >
-                  Pause
-                </button>
+                <p class="under-cta caption-4 muted">
+                  <span aria-hidden="true">↳</span> Your infrastructure. Your code.
+                  MIT licensed.
+                </p>
               </div>
-              <pre
-                class="console-code mono"
-                aria-label="Python task example"
-              ><code><span class="code-muted"># You write the work.</span>
+              <div class="hero__media hero-visual">
+                <div class="console" id="execution-console">
+                  <div class="console-top">
+                    <div class="console-name">
+                      <span class="console-lights" aria-hidden="true"
+                        ><i></i><i></i><i></i></span
+                      ><span class="mono caption-4">process_data.py</span>
+                    </div>
+                    <button
+                      id="pause-motion"
+                      class="pause btn caption-4"
+                      aria-pressed="false"
+                    >
+                      Pause
+                    </button>
+                  </div>
+                  <pre
+                    class="console-code mono"
+                    aria-label="Python task example"
+                  ><code><span class="code-muted"># You write the work.</span>
 <span class="code-orange">async def</span> <span class="code-green">handler</span>(payload):
     result = <span class="code-orange">await</span> process(payload)
     <span class="code-orange">return</span> {<span class="code-green">"result"</span>: result}</code></pre>
-              <div class="execution">
-                <div class="execution-head caption-4 mono">
-                  <span>TaskFlow handles the rest.</span
-                  ><span class="live"><i></i> Simulation</span>
+                  <div class="execution">
+                    <div class="execution-head caption-4 mono">
+                      <span>TaskFlow handles the rest.</span
+                      ><span class="live"><i></i> Simulation</span>
+                    </div>
+                    <div
+                      class="pipeline"
+                      role="img"
+                      aria-label="Task flows from API to Redis queue, Python worker, and persisted task status"
+                    >
+                      <div class="stage">
+                        <div class="stage-symbol mono">&gt;_</div>
+                        <span class="stage-label">Submit</span>
+                      </div>
+                      <div class="wire"><i class="packet"></i></div>
+                      <div class="stage">
+                        <div class="stage-symbol mono">≡</div>
+                        <span class="stage-label">Queue</span>
+                      </div>
+                      <div class="wire"><i class="packet"></i></div>
+                      <div class="stage">
+                        <div class="stage-symbol mono">{ }</div>
+                        <span class="stage-label">Execute</span>
+                      </div>
+                      <div class="wire"><i class="packet"></i></div>
+                      <div class="stage">
+                        <div class="stage-symbol">✓</div>
+                        <span class="stage-label">Persist</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="console-result mono caption-4">
+                    <span>✓ status stored in PostgreSQL</span
+                    ><span class="result-timing">task.complete</span>
+                  </div>
                 </div>
-                <div
-                  class="pipeline"
-                  role="img"
-                  aria-label="Task flows from API to Redis queue, Python worker, and persisted task status"
-                >
-                  <div class="stage">
-                    <div class="stage-symbol mono">&gt;_</div>
-                    <span class="stage-label">Submit</span>
-                  </div>
-                  <div class="wire"><i class="packet"></i></div>
-                  <div class="stage">
-                    <div class="stage-symbol mono">≡</div>
-                    <span class="stage-label">Queue</span>
-                  </div>
-                  <div class="wire"><i class="packet"></i></div>
-                  <div class="stage">
-                    <div class="stage-symbol mono">{ }</div>
-                    <span class="stage-label">Execute</span>
-                  </div>
-                  <div class="wire"><i class="packet"></i></div>
-                  <div class="stage">
-                    <div class="stage-symbol">✓</div>
-                    <span class="stage-label">Persist</span>
-                  </div>
-                </div>
-              </div>
-              <div class="console-result mono caption-4">
-                <span>✓ status stored in PostgreSQL</span
-                ><span class="result-timing">task.complete</span>
+                <p class="demo-note caption-4">
+                  An execution model, not a live cluster.
+                </p>
               </div>
             </div>
-            <p class="demo-note caption-4">
-              An execution model, not a live cluster.
-            </p>
+            <div class="facts">
+              <div class="fact">
+                <strong class="mono">2 → 20</strong
+                ><span class="caption-4 muted"
+                  >Workers that scale<br />with queue depth</span
+                >
+              </div>
+              <div class="fact">
+                <strong class="mono">02</strong
+                ><span class="caption-4 muted"
+                  >Priority queues.<br />Urgent work goes first.</span
+                >
+              </div>
+              <div class="fact">
+                <strong class="mono">def / async</strong
+                ><span class="caption-4 muted"
+                  >Your existing Python.<br />Both supported.</span
+                >
+              </div>
+            </div>
           </div>
         </section>
-        <div class="wrap facts">
-          <div class="fact">
-            <strong class="mono">2 → 20</strong
-            ><span class="caption-4 muted"
-              >Workers that scale<br />with queue depth</span
-            >
-          </div>
-          <div class="fact">
-            <strong class="mono">02</strong
-            ><span class="caption-4 muted"
-              >Priority queues.<br />Urgent work goes first.</span
-            >
-          </div>
-          <div class="fact">
-            <strong class="mono">def / async</strong
-            ><span class="caption-4 muted"
-              >Your existing Python.<br />Both supported.</span
-            >
-          </div>
-        </div>
         <section
           class="section wrap statement"
           aria-labelledby="statement-title"
         >
-          <div class="section-label eyebrow orange">
+          <div class="section-label eyebrow accent">
             Less orchestration.<br />More building.
           </div>
           <div>
-            <h2 id="statement-title" class="heading-2 word-reveal">
+            <h2 id="statement-title" class="heading-2">
               Write the function.<br />Let the system<br />carry the workload.
             </h2>
-            <p class="statement-note body-7 muted reveal">
+            <p class="statement-note body-7 muted">
               The path from Python code to distributed execution shouldn’t
               require a new container image every time you change a function.
             </p>
@@ -203,10 +204,10 @@
           aria-labelledby="scaling-title"
         >
           <div class="wrap">
-            <div class="section-label eyebrow orange">
+            <div class="section-label eyebrow accent">
               01 / A system that responds
             </div>
-            <div class="feature-heading reveal">
+            <div class="feature-heading">
               <h2 id="scaling-title" class="heading-2">
                 More work arrives.<br />More workers show up.
               </h2>
@@ -216,26 +217,26 @@
               </p>
             </div>
             <div class="scaling-grid">
-              <div class="reveal">
+              <div>
                 <div
                   class="scale-controls"
                   role="group"
                   aria-label="Simulated workload"
                 >
                   <button
-                    class="scale-button button-sm"
+                    class="scale-button btn button-sm"
                     data-workers="2"
                     aria-pressed="true"
                   >
                     Quiet queue</button
                   ><button
-                    class="scale-button button-sm"
+                    class="scale-button btn button-sm"
                     data-workers="10"
                     aria-pressed="false"
                   >
                     Work picks up</button
                   ><button
-                    class="scale-button button-sm"
+                    class="scale-button btn button-sm"
                     data-workers="20"
                     aria-pressed="false"
                   >
@@ -257,12 +258,12 @@
                     ><span class="mono">KEDA + Redis</span>
                   </div>
                 </div>
-                <p class="caption-4 muted" style="margin-top: 12px">
+                <p class="scale-note caption-4 muted">
                   Illustrative scaling states. Actual scaling follows queue
                   depth.
                 </p>
               </div>
-              <div class="benefits reveal">
+              <div class="benefits">
                 <article class="benefit">
                   <span class="benefit-num mono caption-4">01</span>
                   <div>
@@ -302,8 +303,8 @@
           class="section wrap setup-grid"
           aria-labelledby="setup-title"
         >
-          <div class="setup-intro reveal">
-            <div class="section-label eyebrow orange">
+          <div class="setup-intro">
+            <div class="section-label eyebrow accent">
               02 / From repo to running
             </div>
             <h2 id="setup-title" class="heading-2">
@@ -320,7 +321,7 @@
               >Read the setup guide <span aria-hidden="true">↗</span></a
             >
           </div>
-          <ol class="steps reveal">
+          <ol class="steps">
             <li>
               <div>
                 <h3 class="title-3">Get the source</h3>
@@ -328,7 +329,7 @@
                   <code class="mono"
                     >git clone
                     https://github.com/dhruvkshah75/TaskFlow.git</code
-                  ><button class="copy" aria-label="Copy clone command">
+                  ><button class="copy btn" aria-label="Copy clone command">
                     Copy
                   </button>
                 </div>
@@ -339,7 +340,7 @@
                 <h3 class="title-3">Enter the project</h3>
                 <div class="command">
                   <code class="mono">cd TaskFlow</code
-                  ><button class="copy" aria-label="Copy directory command">
+                  ><button class="copy btn" aria-label="Copy directory command">
                     Copy
                   </button>
                 </div>
@@ -350,7 +351,7 @@
                 <h3 class="title-3">Start the local stack</h3>
                 <div class="command">
                   <code class="mono">make run-local</code
-                  ><button class="copy" aria-label="Copy deployment command">
+                  ><button class="copy btn" aria-label="Copy deployment command">
                     Copy
                   </button>
                 </div>
@@ -367,10 +368,10 @@
           aria-labelledby="demo-title"
         >
           <div class="wrap">
-            <div class="section-label eyebrow" style="color: #ef9a72">
+            <div class="section-label eyebrow">
               03 / See the actual system
             </div>
-            <div class="demo-heading reveal">
+            <div class="demo-heading">
               <h2 id="demo-title" class="heading-2">
                 Less pitch.<br />More proof.
               </h2>
@@ -379,36 +380,38 @@
                 running system.
               </p>
             </div>
-            <div class="demo-player reveal">
-              <video
-                controls
-                preload="none"
-                playsinline
-                aria-label="TaskFlow project demonstration"
-                poster="assets1/illustration.png"
-              >
-                <source src="assets1/demonstration.mp4" type="video/mp4" />
-                Your browser cannot play this video. Visit the project
-                repository for the demonstration.
-              </video>
-            </div>
-            <div class="demo-foot caption-4">
-              <span>TaskFlow / Project demonstration</span
-              ><span class="mono"
-                >FastAPI · Redis · PostgreSQL · Kubernetes</span
-              >
+            <div class="demo-frame">
+              <div class="demo-player">
+                <video
+                  controls
+                  preload="none"
+                  playsinline
+                  aria-label="TaskFlow project demonstration"
+                  poster="assets1/illustration.png"
+                >
+                  <source src="assets1/demonstration.mp4" type="video/mp4" />
+                  Your browser cannot play this video. Visit the project
+                  repository for the demonstration.
+                </video>
+              </div>
+              <div class="demo-foot caption-4">
+                <span>TaskFlow / Project demonstration</span
+                ><span class="mono"
+                  >FastAPI · Redis · PostgreSQL · Kubernetes</span
+                >
+              </div>
             </div>
           </div>
         </section>
         <section class="section wrap faq-grid" aria-labelledby="faq-title">
-          <div class="reveal">
-            <div class="section-label eyebrow orange">Before you run it</div>
+          <div>
+            <div class="section-label eyebrow accent">Before you run it</div>
             <h2 id="faq-title" class="heading-2">A few useful details.</h2>
             <p class="body-3 muted">
               A little context before you put your first task in motion.
             </p>
           </div>
-          <div class="reveal">
+          <div>
             <details>
               <summary>What kind of tasks can I run?</summary>
               <p>
@@ -458,17 +461,17 @@
             </details>
           </div>
         </section>
-        <section class="wrap" aria-labelledby="closing-title">
-          <div class="closing reveal">
+        <section class="closing-section wrap" aria-labelledby="closing-title">
+          <div class="closing">
             <div>
               <h2 id="closing-title" class="heading-2">
                 Your next task<br />has somewhere to go.
               </h2>
-              <p class="body-3 muted">
+              <p class="body-3">
                 Start with a function. See where it takes you.
               </p>
             </div>
-            <a id="closing-start" class="primary button-md" href="#quickstart"
+            <a id="closing-start" class="primary btn button-md" href="#quickstart"
               >Run TaskFlow locally
               <span class="arrow" aria-hidden="true">↗</span></a
             >
