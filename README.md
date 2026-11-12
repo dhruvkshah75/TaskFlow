@@ -30,7 +30,7 @@ The system leverages **FastAPI** for high-performance task submission, **Redis**
 ### **Key Capabilities**
 
 * **Unified CLI Interface**: Manage the entire lifecycle—from account registration to task deployment and cluster health—directly via the `taskflow` command.
-* **One-Click Debian Installer**: Distributed as a `.deb` package that bundles the CLI and automatically bootstraps the Kubernetes environment on the user's host.
+* **CLI Installation**: Install the CLI from the repository or use a Debian package when available.
 * **Modular Workers**: Upload and execute custom Python code dynamically without redeploying or rebuilding images.
 * **Smart Autoscaling**: KEDA scales workers from 2 to 20 pods based on real-time Redis queue length.
 * **Dual-Priority Queues**: Separate high/low priority Redis queues with intelligent routing for critical tasks.
@@ -40,42 +40,54 @@ The system leverages **FastAPI** for high-performance task submission, **Redis**
 
 ---
 
-## Debian Package Installation of taskflow-cli
-The **TaskFlow CLI** is the primary interface for users to interact with the TaskFlow distributed orchestration system. It is a Python-based command-line tool designed to manage the full lifecycle of distributed tasks—from registration and authentication to monitoring and execution.  
+## TaskFlow CLI
 
-TaskFlow offers a `.deb` package for easy installation on Debian/Ubuntu systems.
+The CLI manages accounts, Python task files, and task execution from your terminal. It connects to the TaskFlow API at `http://localhost:8080` and stores your login token in the system keyring.
 
-### **Prerequisites**
-Before installing the package, ensure you have the following installed:
-- [Docker](https://docs.docker.com/get-docker/) (Daemon must be running)
-- [Minikube](https://minikube.sigs.k8s.io/docs/start/)
-- [kubectl](https://kubernetes.io/docs/tasks/tools/)
+![TaskFlow interactive CLI](public/assets/cli-terminal.png)
 
-### **Installation**
-Install the `.deb` package from the github release section
+### Install and connect
+
+Start the TaskFlow stack using the [local deployment instructions](#kubernetes-local-deployment-minikube). The CLI requires Python 3.8 or newer and a working system keyring. From the repository root, install it in a virtual environment:
 
 ```bash
-  sudo dpkg -i ../taskflow-cli.deb
-```
-This will automatically:
--   Deploy TaskFlow to your local Minikube cluster
--   Set up required secrets and infrastructure
--   Start a system service to forward the API to `localhost:8080`
-
-### **Running**
-Once installed, you can use the CLI immediately:
-```bash
-taskflow             # Start interactive session
-taskflow> register   # Create an account
-taskflow> login      # Login
-taskflow> help       # to view all the commands 
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install ./taskflow_cli
 ```
 
-### **Troubleshooting**
-If you cannot connect to the API, you may need to run port forwarding manually:
+The CLI expects the API on port 8080. If it is not already forwarded, run this in a separate terminal while using the CLI:
+
 ```bash
 kubectl port-forward -n taskflow svc/taskflow-api 8080:80
 ```
+
+A Debian package may also be available in the project's GitHub releases; install a downloaded package with `sudo dpkg -i ./taskflow-cli.deb`.
+
+### Run your first task
+
+Create a Python file with a synchronous or asynchronous `handler(payload)`. The API wraps the submitted string in a dictionary under `data`:
+
+```python
+# hello.py
+def handler(payload):
+    return {"message": f"Hello, {payload['data']}!"}
+```
+
+Run these commands from the directory containing `hello.py`. Registration and login prompt for credentials; login saves the token in your keyring.
+
+```bash
+taskflow register
+taskflow login
+taskflow upload-file hello.py --title hello
+taskflow create-task --title hello --payload world
+taskflow list-tasks
+taskflow get-task 1  # Replace 1 with the ID returned by create-task
+```
+
+The upload title must match the title used to create the task. Use `--scheduled-at 5` to schedule a task five minutes from now. `list-tasks` also accepts `--limit`, `--skip`, `--search`, and `--status`. Use `taskflow delete-task <id>`, `taskflow delete-file --title hello`, or `taskflow logout` when needed; these ask for confirmation. `taskflow list-worker-files` inspects files in a worker pod and requires `kubectl` access to the cluster.
+
+Run `taskflow` without arguments to enter the interactive prompt shown above. Enter the same commands without the `taskflow` prefix, type `help` for the command list or `<command> --help` for options, and use `exit` or `quit` to leave. Outside the prompt, use `taskflow --help` or `taskflow <command> --help`.
 
 ---
 

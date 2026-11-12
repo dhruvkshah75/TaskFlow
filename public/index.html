@@ -37,7 +37,7 @@
             />TaskFlow</a
           >
           <nav class="nav-links" aria-label="Main navigation">
-            <a id="nav-how" href="#how-it-works">How it works</a
+            <a id="nav-how" href="#how-it-works">How it works</a><a href="#cli">CLI</a
             ><a id="nav-demo" href="#demo">Demo</a
             ><a id="nav-architecture" href="architecture.html">Architecture ↗</a
             ><a
@@ -63,7 +63,7 @@
         aria-label="Mobile navigation"
         inert
       >
-        <a id="mobile-how" href="#how-it-works">How it works</a
+        <a id="mobile-how" href="#how-it-works">How it works</a><a href="#cli">CLI</a
         ><a id="mobile-demo" href="#demo">Demo</a
         ><a id="mobile-architecture" href="architecture.html">Architecture ↗</a
         ><a id="mobile-github" href="https://github.com/dhruvkshah75/TaskFlow"
@@ -362,6 +362,32 @@
             </li>
           </ol>
         </section>
+        <section id="cli" class="section cli-section" aria-labelledby="cli-title">
+          <div class="wrap cli-grid">
+            <div class="cli-copy">
+              <div class="section-label eyebrow accent">03 / The command line</div>
+              <h2 id="cli-title" class="heading-2">Your tasks.<br />Your terminal.</h2>
+              <p class="body-3 muted">Register, upload Python files, and follow tasks from an interactive prompt or run commands directly from your shell.</p>
+              <div class="cli-commands mono" aria-label="Example CLI commands">
+                <div><span>$</span> taskflow login</div>
+                <div><span>$</span> taskflow upload-file hello.py --title hello</div>
+                <div><span>$</span> taskflow create-task --title hello --payload world</div>
+                <div><span>$</span> taskflow list-tasks</div>
+              </div>
+              <a class="text-link" href="https://github.com/dhruvkshah75/TaskFlow#taskflow-cli">Install and use the CLI <span aria-hidden="true">↗</span></a>
+            </div>
+            <div class="cli-image">
+              <div class="cli-window-bar" aria-hidden="true">
+                <span class="console-lights"><i></i><i></i><i></i></span>
+                <span class="mono caption-4">taskflow</span>
+                <span class="cli-window-spacer"></span>
+              </div>
+              <div class="cli-screen">
+                <img src="assets/cli-terminal.png" alt="TaskFlow interactive terminal showing quick start commands" loading="lazy" />
+              </div>
+            </div>
+          </div>
+        </section>
         <section
           id="demo"
           class="section demo-section"
@@ -369,7 +395,7 @@
         >
           <div class="wrap">
             <div class="section-label eyebrow">
-              03 / See the actual system
+              04 / See the actual system
             </div>
             <div class="demo-heading">
               <h2 id="demo-title" class="heading-2">

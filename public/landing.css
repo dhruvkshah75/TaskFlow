@@ -922,3 +922,46 @@ details p { max-width: 58ch; padding-bottom: 16px; color: var(--body-muted); }
   .packet { display: none; }
   .btn:hover, .btn:active, .primary:is(:hover, :focus-visible) .arrow { transform: none; }
 }
+
+/* CLI section */
+.cli-section { background: var(--paper); }
+.cli-grid { display: grid; grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.15fr); align-items: center; gap: 48px; }
+.cli-copy { min-width: 0; }
+.cli-copy .body-3 { margin: 24px 0; max-width: 35rem; }
+.cli-commands {
+  margin: 0 0 24px;
+  padding: 20px;
+  overflow-x: auto;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-control);
+  background: var(--cream);
+  color: var(--ink);
+  font-size: 13px;
+  line-height: 2;
+  white-space: nowrap;
+}
+.cli-commands span { color: var(--olive); }
+.cli-image {
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid var(--dark-line);
+  border-radius: var(--radius-card);
+  background: var(--dark-panel);
+  box-shadow: 0 12px 32px #1d1e191c;
+}
+.cli-window-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--dark-line);
+  color: var(--dark-muted);
+}
+.cli-window-spacer, .cli-window-bar .console-lights { width: 31px; }
+.cli-screen { padding: 12px; }
+.cli-screen img { display: block; width: 100%; height: auto; border-radius: 4px; }
+@media (max-width: 760px) {
+  .cli-grid { grid-template-columns: minmax(0, 1fr); gap: 32px; }
+  .cli-screen { padding: 8px; }
+}
